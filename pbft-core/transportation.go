@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-// TODO: implement send/receive messages with sockets
+// TODO: implement send/receive messages with RPC
 
 func MakeTransportations(index int) []*rpc.Client {
 	// index: the index if the server itself
