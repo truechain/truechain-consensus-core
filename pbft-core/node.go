@@ -1,7 +1,6 @@
 package pbft
 
 import "time"
-import "math/rand"
 import (
 	"fmt"
 	"sync"
@@ -11,12 +10,45 @@ import (
 	"net/rpc"
 	"github.com/alecthomas/gometalinter/_linters/github.com/client9/misspell"
 	"github.com/rogpeppe/godef/go/ast"
+	"encoding/base64"
+	"encoding/gob"
+	"bytes"
+	"crypto/rand"
+	"crypto/sha512"
+	"encoding/hex"
 )
 
 const BUFFER_SIZE = 4096 * 32
 
-
 // TODO: change all the int to int64 in case of overflow
+
+// go binary encoder
+func ToGOB64(m []byte) string {
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+	err := e.Encode(m)
+	if err != nil { fmt.Println(`failed gob Encode`, err) }
+	return base64.StdEncoding.EncodeToString(b.Bytes())
+}
+
+// go binary decoder
+func FromGOB64(str string) []byte {
+	m := make([]byte, 0)
+	by, err := base64.StdEncoding.DecodeString(str)
+	if err != nil { fmt.Println(`failed base64 Decode`, err); }
+	b := bytes.Buffer{}
+	b.Write(by)
+	d := gob.NewDecoder(&b)
+	err = d.Decode(&m)
+	if err != nil { fmt.Println(`failed gob Decode`, err); }
+	return m
+}
+
+func getHash(plaintext string) string {
+	hasher := sha512.New()
+	hasher.Write([]byte(plaintext))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
 
 type ApplyMsg struct {
 	Index	int
@@ -30,14 +62,52 @@ type clientMessageLogItem struct {
 
 type DigType string
 
+type nodeMsgLog struct {
+	content map[int](map[int](map[int]Request))
+}
+
+func (nml *nodeMsgLog) get(typ int, seq int, id int) Request {
+	if val, ok := nml.content[typ]; ok {
+		if val2, ok:= val[seq]; ok {
+			if val3, ok:=val2[id]; ok {
+				return val3
+			}
+		}
+	}
+}
+
+func (nml *nodeMsgLog) set(typ int, seq int, id int, req Request) {
+	_ = nml.get(typ, seq, id)  // in case there is an access error
+	nml.content[typ][seq][id] = req
+}
+
+
+type prepareDictItem struct {
+	numberOfPrepared int
+	prepared bool
+}
+
+type commitDictItem struct {
+	numberOfCommit	int
+	committed bool
+}
+
+type checkpointProofType []byte
+
+type hellowSignature big.Int
+
+type keyItem []byte
+
 type Node struct {
 	mu 				sync.Mutex
 	clientMu		sync.Mutex
 	peers 			[]*rpc.Client
 	max_requests	int
 	kill_flag		bool
+
 	ecdsaKey		*ecdsa.PrivateKey
-	helloSignature	*big.Int
+	helloSignature	*hellowSignature
+	connections 	int
 	id				int
 	N 				int
 	view			int
@@ -49,7 +119,7 @@ type Node struct {
 	seq 			int
 	lastExecuted 	int
 	lastStableCheckpoint 	int
-	checkpointProof 		[]byte
+	checkpointProof 		[]checkpointProofType
 	checkpointInterval 		int
 	vmin					int
 	vmax 					int
@@ -58,6 +128,13 @@ type Node struct {
 	clientBuffer 			string
 	active 					map[DigType]ActiveItem
 	prepared				map[int]Request
+	prepDict				map[DigType]prepareDictItem
+	commDict				map[DigType]commitDictItem
+	viewDict				map[int]([]int)
+	keyDict					map[int]keyItem
+
+
+	nodeMessageLog			nodeMsgLog
 
 	/// log
 	clientMessageLog		map[clientMessageLogItem]Request
@@ -66,6 +143,12 @@ type Node struct {
 	/// apply channel
 
 	applyCh					chan ApplyMsg   // Make sure that the client keeps getting the content out of applyCh
+}
+
+type reqCounter struct {
+	number int
+	prepared bool
+	req Request
 }
 
 type Log struct {
@@ -78,17 +161,52 @@ type ActiveItem struct {
 	clientId int
 }
 
-type Request struct {
+type MsgType string
+
+type RequestInner struct {
 	id int
 	seq int
 	view int
 	reqtype string  //or int?
-	msg interface{}  // any kind of msg
+	msg MsgType
 	timestamp int64
-	dig DigType
-	sig string
+	outer *Request
 }
 
+type msgSignature struct {
+	r *big.Int
+	s *big.Int
+}
+
+type Request struct {
+	inner RequestInner
+	dig DigType
+	sig msgSignature
+}
+
+
+func (req *Request) addSig(privKey ecdsa.PrivateKey) (*big.Int, *big.Int) {
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+	err := e.Encode(req.inner)
+	if err != nil {
+		myPrint(3, `failed to encode!`)
+	}
+	s := []byte(getHash(string(b.Bytes())))
+	r, s, err := ecdsa.Sign(rand.Reader, privKey, s)
+	if err != nil {
+		myPrint(3, "Error signing.")
+		return nil, nil
+	}
+	req.sig = msgSignature{r, s}
+}
+
+
+func (nd *Node) resetMsgDicts() {
+	nd.nodeMessageLog = nodeMsgLog{}
+	nd.prepDict = make(map[DigType]prepareDictItem)
+	nd.commDict = make(map[DigType]commitDictItem)
+}
 
 func (nd *Node) execute(am ApplyMsg) {
 	// TODO: add msg to applyCh, should be executed in a separate go routine
@@ -226,6 +344,7 @@ func (nd *Node) NewClientRequest(req Request) {
 
 func (nd *Node) InitializeKeys() {
 	// TODO: initialize ECDSA keys and hello signature
+	nd.ecdsaKey, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)  // TODO: read from file
 
 }
 
@@ -294,6 +413,8 @@ func (nd *Node) ProcessRequest() {
 }
 
 func Make(peers []*rpc.Client, me int, view int, applyCh chan ApplyMsg, max_requests int) *Node {
+	gob.Register(ApplyMsg{})
+	gob.Register(RequestInner{})
 	nd := &Node{}
 	nd.N = len(peers)
 	nd.peers = peers
@@ -310,13 +431,14 @@ func Make(peers []*rpc.Client, me int, view int, applyCh chan ApplyMsg, max_requ
 	nd.timeout = 600
 	//nd.mu = sync.Mutex{}
 	nd.clientBuffer = ""
+
 	//nd.clientMu = sync.Mutex{}
 
 
 	nd.checkpointInterval = 100
 	nd.vmin = 0
 	nd.vmax = 0
-	nd.waiting = nils
+	nd.waiting = nil
 	nd.max_requests = max_requests
 	nd.kill_flag = false
 	nd.id = me
@@ -324,6 +446,7 @@ func Make(peers []*rpc.Client, me int, view int, applyCh chan ApplyMsg, max_requ
 	///// TODO: set up ECDSA
 
 	nd.clientMessageLog = make(map[clientMessageLogItem]Request)
+	nd.InitializeKeys()
 
 	go nd.serverLoop()
 	return nd
