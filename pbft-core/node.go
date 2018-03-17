@@ -18,6 +18,8 @@ import (
 	"encoding/hex"
 	"net"
 	"strconv"
+	"os"
+	"github.com/alecthomas/repr"
 )
 
 const SERVER_PORT = 40162
@@ -73,6 +75,11 @@ type clientMessageLogItem struct {
 	timestamp	int64
 }
 
+type viewDictKey struct {
+	seq int
+	id int
+}
+
 type DigType string
 
 type nodeMsgLog struct {
@@ -107,7 +114,7 @@ type checkpointProofType []byte
 
 type hellowSignature big.Int
 
-type keyItem []byte
+type keyItem *ecdsa.PublicKey
 
 type Node struct {
 	mu 				sync.Mutex
@@ -145,6 +152,8 @@ type Node struct {
 	viewDict				map[int]([]int)
 	keyDict					map[int]keyItem
 
+	outputLog				*os.File
+	commitLog				*os.File
 
 	nodeMessageLog			nodeMsgLog
 
@@ -222,11 +231,21 @@ func (req *Request) addSig(privKey *ecdsa.PrivateKey) {
 	req.sig = msgSignature{sigr, sigs}
 }
 
+func (req *Request) verifyDig() bool {
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
+	err := e.Encode(req.inner)
+	if err != nil {
+		myPrint(3, `failed to encode!`)
+	}
+	s := getHash(string(b.Bytes()))
+	return s == string(req.dig)
+}
 
 func (nd *Node) resetMsgDicts() {
 	nd.nodeMessageLog = nodeMsgLog{}
-	nd.prepDict = make(map[DigType]prepareDictItem)
-	nd.commDict = make(map[DigType]commitDictItem)
+	nd.prepDict = make(map[DigType]reqCounter)
+	nd.commDict = make(map[DigType]reqCounter)
 }
 
 func (nd *Node) execute(am ApplyMsg) {
@@ -417,10 +436,10 @@ func (nd *Node) NewClientRequest(req Request, clientId int) {  // TODO: change t
 	}
 	nd.AddClientLog(req)
 	reqTimer := time.NewTimer(time.Duration(nd.timeout) * time.Second)
-	go func(r Request){
+	go func(t *time.Timer, r Request){
 		<- reqTimer.C
 		nd.HandleTimeout(req.dig, req.inner.view)
-	}(req)
+	}(reqTimer, req)
 	nd.active[req.dig] = ActiveItem{&req, reqTimer, clientId}
 	nd.mu.Unlock()
 
@@ -504,24 +523,176 @@ func (nd *Node) CheckCommittedMargin(dig DigType, req Request) bool {
 
 }
 
-func (nd *Node) ProcessPrePrepare() {
+func (nd *Node) ProcessPrePrepare(req Request, clientId int) {
+	seq := req.inner.seq
+	if val1, ok1 := nd.nodeMessageLog.content[TYPE_PRPR]; ok1 {
+		if _, ok2 := val1[seq]; ok2 {
+			return
+		}
+	}
+	if req.outer != "" {  // TODO. solve this
+		// TODO: check client message signatures
+	} else {
+		client_req := nil  // TODO
+	}
+	if val, ok := nd.active[req.dig]; !ok {
+		reqTimer := time.NewTimer(time.Duration(nd.timeout) * time.Second)
+		go func(t *time.Timer, r Request){
+			<- reqTimer.C
+			nd.HandleTimeout(req.dig, req.inner.view)
+		}(reqTimer, req)
+		nd.active[req.dig] = ActiveItem{&req, reqTimer, clientId}
+	}
 
+	nd.nodeMessageLog.set(req.inner.reqtype, req.inner.seq, req.inner.id, req)
+	m := nd.createRequest(TYPE_PREP, req.inner.seq, req.dig)  // TODO: check content!
+	nd.nodeMessageLog.set(m.inner.reqtype, m.inner.seq, m.inner.id, m)
+	nd.recordPBFT(m)
+	nd.IncPrepDict(req.dig)
+	nd.broadcast(m)
+	if nd.CheckPrepareMargin(req.dig, req.inner.seq) {  // TODO: check dig vs inner.msg
+		nd.record("PREPARED sequence number " + strconv.Itoa(req.inner.seq) + "\n")
+		m := nd.createRequest(TYPE_COMM, req.inner.seq, req.inner.msg) // TODO: check content
+		nd.broadcast(m)
+		nd.nodeMessageLog.set(m.inner.reqtype, m.inner.seq, m.inner.id, m)
+		nd.IncCommDict(m.dig) //TODO: check content
+		nd.recordPBFT(m)
+		nd.prepared[req.inner.seq] = m // or msg?
+		if nd.CheckCommittedMargin(m.dig, m) {
+			nd.record("COMMITED seq number " + strconv.Itoa(m.inner.seq) + "\n")
+			nd.recordPBFTCommit(m)
+			nd.executeInOrder(m)
+		}
+	}
 }
 
-func (nd *Node) ProcessPrepare() {
-
+func (nd *Node) recordCommit(content string) {
+	if _, err:= nd.commitLog.Write([]byte(content)); err != nil {
+		panic(err)
+	}
 }
 
-func (nd *Node) ProcessCommit() {
-
+func (nd *Node) record(content string) {
+	if _, err:= nd.outputLog.Write([]byte(content)); err != nil {
+		panic(err)
+	}
 }
 
-func (nd *Node) VirtualProcessCheckPoint() {
-
+func (nd *Node) recordPBFTCommit(req Request) {
+	reqsummary := repr.String(&req)
+	res := fmt.Sprintf("[%d] seq:%d from:%d view:%d %s\n", req.inner.reqtype, req.inner.seq, req.inner.id, req.inner.view, reqsummary)
+	nd.recordCommit(res)
 }
 
-func (nd *Node) VirtualProcessPrepare() {
 
+func (nd *Node) recordPBFT(req Request) {
+	reqsummary := repr.String(&req)
+	res := fmt.Sprintf("[%d] seq:%d from:%d view:%d %s\n", req.inner.reqtype, req.inner.seq, req.inner.id, req.inner.view, reqsummary)
+	nd.record(res)
+}
+
+func (nd *Node) addNodeHistory(req Request) {
+	nd.nodeMessageLog.set(req.inner.reqtype, req.inner.seq, req.inner.id, req)
+}
+
+func (nd *Node) ProcessPrepare(req Request, clientId int) {
+	nd.addNodeHistory(req)
+	nd.IncPrepDict(req.dig)
+	if nd.CheckPrepareMargin(req.dig, req.inner.seq) {  // TODO: check dig vs inner.msg
+		nd.record("PREPARED sequence number " + strconv.Itoa(req.inner.seq) + "\n")
+		m := nd.createRequest(TYPE_COMM, req.inner.seq, req.inner.msg) // TODO: check content
+		nd.broadcast(m)
+		nd.nodeMessageLog.set(m.inner.reqtype, m.inner.seq, m.inner.id, m)
+		nd.IncCommDict(m.dig) //TODO: check content
+		nd.recordPBFT(m)
+		nd.prepared[req.inner.seq] = m // or msg?
+		if nd.CheckCommittedMargin(m.dig, m) {
+			nd.record("COMMITED seq number " + strconv.Itoa(m.inner.seq) + "\n")
+			nd.recordPBFTCommit(m)
+			nd.executeInOrder(m)
+		}
+	}
+}
+
+func (nd *Node) ProcessCommit(req Request) {
+	nd.addNodeHistory(req)
+	nd.IncCommDict(req.dig)
+	if nd.CheckCommittedMargin(req.dig, req) {
+		nd.record("COMMITTED seq number " + strconv.Itoa(req.inner.seq))
+		nd.recordPBFTCommit(req)
+		nd.executeInOrder(req)
+	}
+}
+
+func (nd *Node) ViewProcessCheckPoint(vchecklist *[]Request, lastCheckPoint int) bool {
+	if lastCheckPoint == 0 {
+		return true
+	}
+	if len(*vchecklist) <= 2 * nd.f {
+		return false
+	}
+	dig := (*vchecklist)[0].dig
+	for _, c := range *vchecklist {
+		if c.inner.seq != lastCheckPoint || c.dig != dig {
+			return false
+		}
+	}
+	return true
+}
+
+type viewDict map[int](map[int]Request)  //map[viewDictKey]Request
+
+func (nd *Node) VerifyMsg(req Request) bool {
+	key := nd.keyDict[req.inner.id]
+	// check the digest
+	dv := req.verifyDig()
+	// check the signature
+	sc := ecdsa.Verify(key, []byte(req.dig), req.sig.r, req.sig.s)
+	return dv && sc
+}
+
+func (nd *Node) ViewProcessPrepare(vPrepDict viewDict, vPreDict map[int]Request, lastCheckPoint int) bool {
+	max:=0
+	counter := make(map[int]int)
+	for k1, v1 := range vPrepDict {
+		if _, ok := vPreDict[k1]; !ok {
+			return false
+		}
+		reqTemp:= vPreDict[k1]
+		dig := reqTemp.dig
+		if !nd.VerifyMsg(reqTemp) {
+			return false
+		}
+		for k2, v2 := range v1 {
+			if !nd.VerifyMsg(v2) {
+				return false
+			}
+			if v2.dig != dig {
+				return false
+			}
+			if reqTemp.inner.id == v2.inner.id {
+				return false // cannot be sent from the same guy
+			}
+			if v2.inner.seq < lastCheckPoint {
+				return false
+			}
+			if v2.inner.seq > max {
+				max = v2.inner.seq
+			}
+			if val3, ok3 := counter[v2.inner.seq]; !ok3 {
+				counter[v2.inner.seq]  = 1
+			} else {
+				counter[v2.inner.seq] += 1
+			}
+		}
+	}
+	for k, v := range counter {
+		if v < 2 * nd.f {
+			return false
+		}
+		nd.addNodeHistory(vPreDict[k])
+	}
+	return true
 }
 
 func (nd *Node) ProcessViewChange() {
@@ -548,6 +719,10 @@ func (nd *Node) ProcessRequest() {
 
 }
 
+func (nd *Node) BeforeShutdown() {
+	nd.outputLog.Close()
+}
+
 func Make(peers []*rpc.Client, me int, port int, view int, applyCh chan ApplyMsg, max_requests int) *Node {
 	gob.Register(ApplyMsg{})
 	gob.Register(RequestInner{})
@@ -567,7 +742,7 @@ func Make(peers []*rpc.Client, me int, port int, view int, applyCh chan ApplyMsg
 	nd.seq = 0
 	nd.lastExecuted = 0
 	nd.lastStableCheckpoint = 0
-	nd.checkpointProof = make([]byte, 0)
+	nd.checkpointProof = make([]checkpointProofType, 0)
 	nd.timeout = 600
 	//nd.mu = sync.Mutex{}
 	nd.clientBuffer = ""
@@ -583,6 +758,15 @@ func Make(peers []*rpc.Client, me int, port int, view int, applyCh chan ApplyMsg
 	nd.kill_flag = false
 	nd.id = me
 	nd.applyCh = applyCh
+
+	fi, err := os.Create("pbftlog" + strconv.Itoa(nd.id) + ".txt")
+	if err != nil {
+		nd.outputLog = fi
+	}
+	fi2, err2 := os.Create("pbftcommit" + strconv.Itoa(nd.id) + ".txt")
+	if err2 != nil {
+		nd.commitLog = fi2
+	}
 	///// TODO: set up ECDSA
 
 	nd.clientMessageLog = make(map[clientMessageLogItem]Request)
