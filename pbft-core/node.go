@@ -16,9 +16,22 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"encoding/hex"
+	"net"
+	"strconv"
 )
 
+const SERVER_PORT = 40162
 const BUFFER_SIZE = 4096 * 32
+const (
+	TYPE_PRPR = iota
+	TYPE_PREP = iota
+	TYPE_COMM = iota
+	TYPE_INIT = iota
+	TYPE_REQU = iota
+	TYPE_VCHA = iota
+	TYPE_NEVW = iota
+	TYPE_CHKP = iota
+)
 
 // TODO: change all the int to int64 in case of overflow
 
@@ -66,30 +79,28 @@ type nodeMsgLog struct {
 	content map[int](map[int](map[int]Request))
 }
 
-func (nml *nodeMsgLog) get(typ int, seq int, id int) Request {
+func (nml *nodeMsgLog) get(typ int, seq int, id int) (Request, bool) {
 	if val, ok := nml.content[typ]; ok {
 		if val2, ok:= val[seq]; ok {
 			if val3, ok:=val2[id]; ok {
-				return val3
+				return val3, true
+			} else {
+				return Request{}, false
 			}
 		}
 	}
 }
 
 func (nml *nodeMsgLog) set(typ int, seq int, id int, req Request) {
-	_ = nml.get(typ, seq, id)  // in case there is an access error
+	_, _ = nml.get(typ, seq, id)  // in case there is an access error
 	nml.content[typ][seq][id] = req
-}
-
-
-type prepareDictItem struct {
-	numberOfPrepared int
-	prepared bool
 }
 
 type commitDictItem struct {
 	numberOfCommit	int
 	committed bool
+	prepared bool
+	req Request
 }
 
 type checkpointProofType []byte
@@ -102,6 +113,7 @@ type Node struct {
 	mu 				sync.Mutex
 	clientMu		sync.Mutex
 	peers 			[]*rpc.Client
+	port			int
 	max_requests	int
 	kill_flag		bool
 
@@ -128,8 +140,8 @@ type Node struct {
 	clientBuffer 			string
 	active 					map[DigType]ActiveItem
 	prepared				map[int]Request
-	prepDict				map[DigType]prepareDictItem
-	commDict				map[DigType]commitDictItem
+	prepDict				map[DigType]reqCounter
+	commDict				map[DigType]reqCounter
 	viewDict				map[int]([]int)
 	keyDict					map[int]keyItem
 
@@ -167,7 +179,7 @@ type RequestInner struct {
 	id int
 	seq int
 	view int
-	reqtype string  //or int?
+	reqtype int  //or int?
 	msg MsgType
 	timestamp int64
 	outer *Request
@@ -184,21 +196,30 @@ type Request struct {
 	sig msgSignature
 }
 
+func (nd *Node) createRequest(reqType int, seq int, msg MsgType) Request {
+	key := nd.ecdsaKey
+	m := RequestInner{nd.id, seq, nd.view, reqType, msg, -1, nil}
+	req := Request{m, nil, nil}
+	req.inner.outer = &req
+	req.addSig(key)
+	return req
+}
 
-func (req *Request) addSig(privKey ecdsa.PrivateKey) (*big.Int, *big.Int) {
+func (req *Request) addSig(privKey *ecdsa.PrivateKey) {
 	b := bytes.Buffer{}
 	e := gob.NewEncoder(&b)
 	err := e.Encode(req.inner)
 	if err != nil {
 		myPrint(3, `failed to encode!`)
 	}
-	s := []byte(getHash(string(b.Bytes())))
-	r, s, err := ecdsa.Sign(rand.Reader, privKey, s)
+	s := getHash(string(b.Bytes()))
+	sigr, sigs, err := ecdsa.Sign(rand.Reader, privKey, []byte(s))
 	if err != nil {
 		myPrint(3, "Error signing.")
-		return nil, nil
+		return
 	}
-	req.sig = msgSignature{r, s}
+	req.dig = s
+	req.sig = msgSignature{sigr, sigs}
 }
 
 
@@ -218,8 +239,31 @@ func (nd *Node) suicide() {
 	nd.kill_flag = true
 }
 
+func (nd *Node) broadcast(req Request) {
+	switch req.inner.reqtype {
+	case TYPE_PRPR:
+		nd.broadcastByRPC("Node.ProcessPrePare", )
+		break
+	case TYPE_REQU:
+		nd.broadcastByRPC("Node.NewClientRequest")
+	case TYPE_PREP:
+		nd.broadcastByRPC("Node.ProcessPrepare")
+	case TYPE_COMM:
+		nd.broadcastByRPC("Node.ProcessCommit")
+	case TYPE_VCHA:
+		nd.broadcastByRPC("Node.ProcessViewChange")
+	case TYPE_NEVW:
+		nd.broadcastByRPC("Node.ProcessNewView")
+	case TYPE_CHKP:
+		nd.broadcastByRPC("Node.ProcessCheckpoint")
+	default:
+		panic(1)  // something bad
+
+	}
+}
+
 // broadcast to all the peers
-func (nd *Node) broadcast(rpcPath string, arg interface{}, reply []*interface{}) {
+func (nd *Node) broadcastByRPC(rpcPath string, arg interface{}, reply []*interface{}) {
 	divCallList := make([]*rpc.Call, 0)
 	for ind, c := range nd.peers {
 		if ind == nd.id {
@@ -240,7 +284,7 @@ func (nd *Node) executeInOrder(req Request) {
 	// Not sure if we need this inside the protocol. I tend to put this in application layer.
 	waiting := true
 	r := req
-	seq := req.seq
+	seq := req.inner.seq
 	dig := req.dig
 	ac := nd.active[dig]
 	if ac.req == nil {
@@ -248,7 +292,7 @@ func (nd *Node) executeInOrder(req Request) {
 	}
 	for seq == nd.lastExecuted + 1 {
 		waiting = false
-		nd.execute(ApplyMsg{seq, r.msg})
+		nd.execute(ApplyMsg{seq, r})
 		nd.lastExecuted += 1
 		rtemp, ok := nd.waiting[seq + 1]
 		if ok {
@@ -260,14 +304,26 @@ func (nd *Node) executeInOrder(req Request) {
 	}
 
 	if waiting {
-		nd.waiting[req.seq] = req
+		nd.waiting[req.inner.seq] = req
 	}
 }
 
 func (nd *Node) serverLoop() {
+
+	ln, err := net.Listen("tcp", ":" + strconv.Itoa(nd.port))
+	if err != nil {
+		myPrint(3, "Error in listening...")
+		return
+	}
 	counter := 0
 
 	for {
+		c, err := ln.Accept()
+		if err != nil {
+			continue
+		}
+		go rpc.ServeConn(c)
+
 		// get events from the buffer
 		// TODO: finish server loop
 	}
@@ -283,7 +339,7 @@ func (nd *Node) ProcessCheckpoint() {
 }
 
 func (nd *Node) IsInClientLog(req Request) bool {
-	req, ok := nd.clientMessageLog[clientMessageLogItem{req.id, req.timestamp}]
+	req, ok := nd.clientMessageLog[clientMessageLogItem{req.inner.id, req.inner.timestamp}]
 	if !ok {
 		return false
 	} else {
@@ -293,7 +349,7 @@ func (nd *Node) IsInClientLog(req Request) bool {
 
 func (nd *Node) AddClientLog(req Request) {
 	if !nd.IsInClientLog(req) {
-		nd.clientMessageLog[clientMessageLogItem{req.id, req.timestamp}]  = req
+		nd.clientMessageLog[clientMessageLogItem{req.inner.id, req.inner.timestamp}]  = req
 	}
 	return // We don't have logs for now
 }
@@ -314,32 +370,67 @@ func (nd *Node) HandleTimeout(dig DigType, view int) {
 	nd.viewInUse = false
 	nd.mu.Unlock()
 
-	msg := ""
+	b := bytes.Buffer{}
+	e := gob.NewEncoder(&b)
 	for cp := range nd.checkpointProof {
-		msg += cp  // type of checkpoint proofs
+		e.Encode(cp)
 	}
 
 	for k, v := range nd.prepared {
-		msg += v // TODO: serialize the corresponnding Pre-Prepare
+		r, _ := nd.nodeMessageLog.get(TYPE_PRPR, k, nd.primary) // old primary
+		e.Encode(v)
 		counter := 0
 		for i := 1; i < nd.N; i++ {
 			if counter == 2*nd.f {
 				break
 			}
-			// TODO: add counter whenever we found a PREP
+			r, ok := nd.nodeMessageLog.get(TYPE_PREP, k, i)
+			if ok {
+				e.Encode(r)
+				counter += 1
+				// TODO: add counter whenever we found a PREP
+			}
 		}
-
 	}
 
+	viewChange := nd.createRequest(TYPE_VCHA, nd.lastStableCheckpoint, MsgType(b))
+	nd.broadcast() // TODO: broadcast view change RPC path.
+	nd.ProcessViewChange(viewChange, 0)
 }
 
-func (nd *Node) NewClientRequest(req Request) {
+func (nd *Node) NewClientRequest(req Request, clientId int) {  // TODO: change to single arg and single reply
 	if v, ok := nd.active[req.dig]; ok {
 		if v.req == nil {
-
+			nd.active[req.dig] = ActiveItem{&req, v.t, v.clientId}
+			if v2, ok2 := nd.commDict[req.dig]; ok2 && v2.prepared{
+				msg := v2.req
+				nd.executeInOrder(msg)
+			}
+			return
 		}
 	}
 
+	nd.mu.Lock()
+	if !nd.viewInUse {
+		nd.mu.Unlock()
+		return
+	}
+	nd.AddClientLog(req)
+	reqTimer := time.NewTimer(time.Duration(nd.timeout) * time.Second)
+	go func(r Request){
+		<- reqTimer.C
+		nd.HandleTimeout(req.dig, req.inner.view)
+	}(req)
+	nd.active[req.dig] = ActiveItem{&req, reqTimer, clientId}
+	nd.mu.Unlock()
+
+	if nd.primary == nd.id {
+		nd.seq = nd.seq + 1
+		m := nd.createRequest(TYPE_PRPR, nd.seq, req.dig)
+		nd.nodeMessageLog.set(m.inner.reqtype, m.inner.seq, m.inner.id, m)
+		// write log
+		nd.broadcast(m)  // TODO: broadcast pre-prepare RPC path.
+	}
 }
 
 func (nd *Node) InitializeKeys() {
@@ -348,19 +439,68 @@ func (nd *Node) InitializeKeys() {
 
 }
 
-func (nd *Node) IncPrepDict() {
+func (nd *Node) IncPrepDict(dig DigType) {
+	if val, ok := nd.prepDict[dig]; ok {
+		val.number += 1
+		nd.prepDict[dig] = val
+	} else {
+		nd.prepDict[dig] = reqCounter{1, false, nil}
+	}
 
 }
 
-func (nd *Node) IncCommDict() {
+func (nd *Node) IncCommDict(dig DigType) {
+	if val, ok := nd.commDict[dig]; ok {
+		val.number += 1
+		nd.commDict[dig] = val
+	} else {
+		nd.commDict[dig] = reqCounter{1, false, nil}
+	}
+}
+
+func (nd *Node) CheckPrepareMargin(dig DigType, seq int) bool {
+	if val, ok := nd.prepDict[dig]; ok {
+		if !val.prepared {
+			if val.number >= 2 * nd.f + 1 {
+				val, ok := nd.nodeMessageLog.get(TYPE_PRPR, seq, nd.primary)
+				if ok && val.dig == dig {   // TODO: check the diff!
+				//if ok && val.inner.msg == dig {
+					if valt, okt := nd.prepDict[dig]; okt {
+						valt.prepared = true
+						nd.prepDict[dig] = valt
+						return true
+					}
+				}
+			}
+		}
+		return false
+	} else {
+		return false
+	}
 
 }
 
-func (nd *Node) CheckPrepareMargin() {
-
-}
-
-func (nd *Node) CheckCommittedMargin() {
+func (nd *Node) CheckCommittedMargin(dig DigType, req Request) bool {
+	seq := req.inner.seq
+	if val, ok := nd.commDict[dig]; ok {
+		if !val.prepared {
+			if val.number >= 2 * nd.f + 1 {
+				val, ok := nd.nodeMessageLog.get(TYPE_PRPR, seq, nd.primary)
+				if ok && val.dig == dig {   // TODO: check the diff!
+					//if ok && val.inner.msg == dig {
+					if valt, okt := nd.commDict[dig]; okt {
+						valt.prepared = true
+						valt.req = req
+						nd.commDict[dig] = valt
+						return true
+					}
+				}
+			}
+		}
+		return false
+	} else {
+		return false
+	}
 
 }
 
@@ -400,10 +540,6 @@ func (nd *Node) ProcessNewView() {
 
 }
 
-func (nd *Node) AddNodeLog() {
-
-}
-
 func (nd *Node) IsInNodeLog() {
 
 }
@@ -412,9 +548,12 @@ func (nd *Node) ProcessRequest() {
 
 }
 
-func Make(peers []*rpc.Client, me int, view int, applyCh chan ApplyMsg, max_requests int) *Node {
+func Make(peers []*rpc.Client, me int, port int, view int, applyCh chan ApplyMsg, max_requests int) *Node {
 	gob.Register(ApplyMsg{})
 	gob.Register(RequestInner{})
+	gob.Register(Request{})
+	gob.Register(checkpointProofType{})
+	rpc.Register(Node{})
 	nd := &Node{}
 	nd.N = len(peers)
 	nd.peers = peers
@@ -424,6 +563,7 @@ func Make(peers []*rpc.Client, me int, view int, applyCh chan ApplyMsg, max_requ
 	nd.view = view
 	nd.viewInUse = true
 	nd.primary = view % nd.N
+	nd.port = port
 	nd.seq = 0
 	nd.lastExecuted = 0
 	nd.lastStableCheckpoint = 0
@@ -431,7 +571,7 @@ func Make(peers []*rpc.Client, me int, view int, applyCh chan ApplyMsg, max_requ
 	nd.timeout = 600
 	//nd.mu = sync.Mutex{}
 	nd.clientBuffer = ""
-
+	nd.port =
 	//nd.clientMu = sync.Mutex{}
 
 
