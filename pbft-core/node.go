@@ -267,38 +267,170 @@ func (nd *Node) suicide() {
 	nd.kill_flag = true
 }
 
+type ProxyProcessPrePrepareArg struct {
+	req Request
+	clientID int
+}
+
+type ProxyProcessPrePrepareReply struct {
+
+}
+
+type ProxyNewClientRequestArg struct {
+	req Request
+	clientID int
+}
+
+type ProxyNewClientRequestReply struct {
+
+}
+
+type ProxyProcessPrepareArg struct {
+	req Request
+	clientID int
+}
+
+type ProxyProcessPrepareReply struct {
+
+}
+
+type ProxyProcessCommitArg struct {
+	req Request
+}
+
+type ProxyProcessCommitReply struct {
+
+}
+
+type ProxyProcessViewChangeArg struct {
+	req Request
+}
+
+type ProxyProcessViewChangeReply struct {
+
+}
+
+type ProxyProcessNewViewArg struct {
+	req Request
+	clientId int
+}
+
+type ProxyProcessNewViewReply struct {
+
+}
+
+type ProxyProcessCheckpointArg struct {
+	req Request
+	clientId int
+}
+
+type ProxyProcessCheckpointReply struct {
+
+}
+
+
 func (nd *Node) broadcast(req Request) {
+
 	switch req.inner.reqtype {
 	// refine the following
 	case TYPE_PRPR:
-		nd.broadcastByRPC("Node.ProcessPrePare", )
+		arg := ProxyProcessPrePrepareArg{req, req.inner.id}
+		reply := make([]interface{}, nd.N)
+		for k:= 0; k < nd.N; k++ {
+			reply[k] = &ProxyProcessPrePrepareReply{}
+		}
+		nd.broadcastByRPC("Node.ProxyProcessPrePrepare", arg, &reply)
 		break
 	case TYPE_REQU:
-		nd.broadcastByRPC("Node.NewClientRequest")
+		arg := ProxyNewClientRequestArg{req, req.inner.id}
+		reply := make([]interface{}, nd.N)
+		for k:= 0; k < nd.N; k++ {
+			reply[k] = &ProxyNewClientRequestReply{}
+		}
+		nd.broadcastByRPC("Node.ProxyNewClientRequest", arg, &reply)
+		break
 	case TYPE_PREP:
-		nd.broadcastByRPC("Node.ProcessPrepare")
+		arg := ProxyProcessPrepareArg{req, req.inner.id}
+		reply := make([]interface{}, nd.N)
+		for k:= 0; k < nd.N; k++ {
+			reply[k] = &ProxyProcessPrepareReply{}
+		}
+		nd.broadcastByRPC("Node.ProxyProcessPrepare", arg, &reply)
+		break
 	case TYPE_COMM:
-		nd.broadcastByRPC("Node.ProcessCommit")
+		arg := ProxyProcessCommitArg{req}
+		reply := make([]interface{}, nd.N)
+		for k:= 0; k < nd.N; k++ {
+			reply[k] = &ProxyProcessCommitReply{}
+		}
+		nd.broadcastByRPC("Node.ProxyProcessCommit", arg, &reply)
+		break
 	case TYPE_VCHA:
-		nd.broadcastByRPC("Node.ProcessViewChange")
+		arg := ProxyProcessViewChangeArg{req}
+		reply := make([]interface{}, nd.N)
+		for k:= 0; k < nd.N; k++ {
+			reply[k] = &ProxyProcessViewChangeReply{}
+		}
+		nd.broadcastByRPC("Node.ProxyProcessViewChange", arg, &reply)
+		break
 	case TYPE_NEVW:
-		nd.broadcastByRPC("Node.ProcessNewView")
+		arg := ProxyProcessNewViewArg{req, req.inner.id}
+		reply := make([]interface{}, nd.N)
+		for k:= 0; k < nd.N; k++ {
+			reply[k] = &ProxyProcessNewViewReply{}
+		}
+		nd.broadcastByRPC("Node.ProxyProcessNewView", arg, &reply)
+		break
 	case TYPE_CHKP:
-		nd.broadcastByRPC("Node.ProcessCheckpoint")
+		arg := ProxyProcessCheckpointArg{req, req.inner.id}
+		reply := make([]interface{}, nd.N)
+		for k:= 0; k < nd.N; k++ {
+			reply[k] = &ProxyProcessCheckpointReply{}
+		}
+		nd.broadcastByRPC("Node.ProxyProcessCheckpoint", arg, &reply)
+		break
 	default:
 		panic(1)  // something bad
 
 	}
 }
 
+func (nd *Node) ProxyProcessPrePrepare(arg ProxyProcessPrePrepareArg, reply *ProxyProcessPrePrepareReply) {
+	nd.ProcessPrePrepare(arg.req, arg.clientID)  // we don't have return value here
+}
+
+func (nd *Node) ProxyNewClientRequest(arg ProxyNewClientRequestArg, reply *ProxyNewClientRequestReply) {
+	nd.NewClientRequest(arg.req, arg.clientID)  // we don't have return value here
+}
+
+func (nd *Node) ProxyProcessPrepare(arg ProxyProcessPrepareArg, reply *ProxyProcessPrepareReply) {
+	nd.ProcessPrepare(arg.req, arg.clientID)  // we don't have return value here
+}
+
+func (nd *Node) ProxyProcessCommit(arg ProxyProcessCommitArg, reply *ProxyProcessCommitReply) {
+	nd.ProcessCommit(arg.req)  // we don't have return value here
+}
+
+func (nd *Node) ProxyProcessViewChange(arg ProxyProcessViewChangeArg, reply *ProxyProcessViewChangeReply) {
+	nd.ProcessViewChange(arg.req)
+}
+
+func (nd *Node) ProxyProcessNewView(arg ProxyProcessNewViewArg, reply *ProxyProcessNewViewReply) {
+	nd.ProcessNewView(arg.req, arg.clientId)
+}
+
+func (nd *Node) ProxyProcessCheckpoint(arg ProxyProcessCheckpointArg, reply *ProxyProcessCheckpointReply) {
+	nd.ProcessCheckpoint(arg.req, arg.clientId)
+}
+
 // broadcast to all the peers
-func (nd *Node) broadcastByRPC(rpcPath string, arg interface{}, reply []*interface{}) {
+func (nd *Node) broadcastByRPC(rpcPath string, arg interface, reply *[]interface) {
 	divCallList := make([]*rpc.Call, 0)
 	for ind, c := range nd.peers {
 		if ind == nd.id {
 			continue  // skip the node itself
 		}
-		divCallList = append(divCallList, c.Go(rpcPath, arg, reply[ind], nil))
+		divCallList = append(divCallList, c.Go(rpcPath, arg, (*reply)[ind], nil))
 	}
 	// synchronize
 	for _, divCall := range divCallList {
@@ -362,7 +494,7 @@ func (nd *Node) clean() {
 	// TODO: do clean work
 }
 
-func (nd *Node) ProcessCheckpoint() {
+func (nd *Node) ProcessCheckpoint(req Request, clientID int) {
 	// TODO: Add checkpoint support
 	// Empty for now
 }
@@ -899,7 +1031,22 @@ func Make(peers []*rpc.Client, me int, port int, view int, applyCh chan ApplyMsg
 	gob.Register(RequestInner{})
 	gob.Register(Request{})
 	gob.Register(checkpointProofType{})
+	gob.Register(ProxyProcessPrePrepareArg{})
+	gob.Register(ProxyProcessPrePrepareReply{})
+	gob.Register(ProxyNewClientRequestArg{})
+	gob.Register(ProxyNewClientRequestReply{})
+	gob.Register(ProxyProcessCheckpointArg{})
+	gob.Register(ProxyProcessCheckpointReply{})
+	gob.Register(ProxyProcessCommitArg{})
+	gob.Register(ProxyProcessCommitReply{})
+	gob.Register(ProxyProcessNewViewArg{})
+	gob.Register(ProxyProcessNewViewReply{})
+	gob.Register(ProxyProcessPrepareArg{})
+	gob.Register(ProxyProcessPrepareReply{})
+	gob.Register(ProxyProcessViewChangeArg{})
+	gob.Register(ProxyProcessViewChangeReply{})
 	rpc.Register(Node{})
+
 	nd := &Node{}
 	nd.N = len(peers)
 	nd.peers = peers
