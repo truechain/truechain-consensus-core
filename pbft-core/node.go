@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"os"
 	"github.com/alecthomas/repr"
+	"golang.org/x/tools/go/gcimporter15/testdata"
 )
 
 const SERVER_PORT = 40162
@@ -112,6 +113,14 @@ type commitDictItem struct {
 
 type checkpointProofType []byte
 
+type viewDictItem struct {
+	store []Request
+	holder1 int
+	holder2 int
+}
+
+type viewDictType map[int]viewDictItem
+
 type hellowSignature big.Int
 
 type keyItem *ecdsa.PublicKey
@@ -149,7 +158,7 @@ type Node struct {
 	prepared				map[int]Request
 	prepDict				map[DigType]reqCounter
 	commDict				map[DigType]reqCounter
-	viewDict				map[int]([]int)
+	viewDict				viewDictType
 	keyDict					map[int]keyItem
 
 	outputLog				*os.File
@@ -260,6 +269,7 @@ func (nd *Node) suicide() {
 
 func (nd *Node) broadcast(req Request) {
 	switch req.inner.reqtype {
+	// refine the following
 	case TYPE_PRPR:
 		nd.broadcastByRPC("Node.ProcessPrePare", )
 		break
@@ -335,7 +345,7 @@ func (nd *Node) serverLoop() {
 		return
 	}
 	counter := 0
-
+	// TODO: try client
 	for {
 		c, err := ln.Accept()
 		if err != nil {
@@ -391,16 +401,21 @@ func (nd *Node) HandleTimeout(dig DigType, view int) {
 
 	b := bytes.Buffer{}
 	e := gob.NewEncoder(&b)
+	e.Encode(len(nd.checkpointProof))
 	for cp := range nd.checkpointProof {
 		e.Encode(cp)
 	}
-
+	e.Encode(len(nd.prepared))
 	for k, v := range nd.prepared {
 		r, _ := nd.nodeMessageLog.get(TYPE_PRPR, k, nd.primary) // old primary
 		e.Encode(v)
 		counter := 0
 		for i := 1; i < nd.N; i++ {
 			if counter == 2*nd.f {
+				rtmp := Request{}  // to make sure that alwyas N reqs are encoded
+				rtmp.inner = RequestInner{}
+				rtmp.inner.id = -1
+				e.Encode(rtmp)
 				break
 			}
 			r, ok := nd.nodeMessageLog.get(TYPE_PREP, k, i)
@@ -413,7 +428,7 @@ func (nd *Node) HandleTimeout(dig DigType, view int) {
 	}
 
 	viewChange := nd.createRequest(TYPE_VCHA, nd.lastStableCheckpoint, MsgType(b))
-	nd.broadcast() // TODO: broadcast view change RPC path.
+	nd.broadcast(viewChange) // TODO: broadcast view change RPC path.
 	nd.ProcessViewChange(viewChange, 0)
 }
 
@@ -695,28 +710,184 @@ func (nd *Node) ViewProcessPrepare(vPrepDict viewDict, vPreDict map[int]Request,
 	return true
 }
 
-func (nd *Node) ProcessViewChange() {
+func (nd *Node) ProcessViewChange(req Request) {
+	myPrint(1, "Receiveed a view change req from " + strconv.Itoa(req.inner.id))
+	nd.addNodeHistory(req)
+	newV := req.inner.view
+	if nd.view != req.inner.view || newV < nd.view {
+		return
+	}
+	/*
+	# (NEVW, v+1, V, O) where V is set of valid VCHA, O is set of PRPR
+        #TODO (NO PIGGYBACK)
+        # determine the latest stable checkpoint
+        checkpoint = 0
+        # [seq][id] -> req
+        # for each view change message
+        #for r in self.view_dict[new_v]:
 
+	 */
+	vcheckList := make([]Request, 0)
+	vpreDict := make(map[int]Request)
+	vPrepDict := make(viewDict)
+	m := req.inner.msg
+	bufm := bytes.Buffer{}
+	bufm.Write([]byte(m))
+	//// extract msgs in m
+	dec := gob.NewDecoder(&bufm)
+	var lenCkPf, preparedLen int
+	checkpointProofT := make([]checkpointProofType, 0)
+	vpreDict := make(map[int]Request)
+	vprepDict := make(viewDict)
+	dec.Decode(&lenCkPf)
+
+	for i:=0; i< lenCkPf; i++ {
+		ckpf := checkpointProofType{}
+		dec.Decode(&ckpf)
+		checkpointProofT = append(checkpointProofT, ckpf)
+	}
+	dec.Decode(&preparedLen)
+	for j:=0; j< preparedLen; j++ {
+		r:=Request{}
+		dec.Decode(&r)
+		for k:=0 ; k< nd.N; k++ {
+			var rt Request
+			dec.Decode(&rt)
+			if rt.inner.id >= 0 {  // so that this is not a dummy req
+				switch rt.inner.reqtype {
+				case TYPE_PREP:
+					if _, ok := vprepDict[rt.inner.seq]; !ok {
+						vprepDict[rt.inner.seq] = make(map[int]Request)
+					}
+					vprepDict[rt.inner.seq][rt.inner.id] = rt
+					break
+				case TYPE_PRPR:
+					vpreDict[rt.inner.seq] = rt
+				}
+
+			}
+		}
+	}
+	rc1 := nd.ViewProcessCheckPoint(checkpointProofT, req.inner.seq)  // fix the type of checkPointProofT
+	rc2, maxm := nd.ViewProcessPrepare(vprepDict, vpreDict, req.inner.seq)
+	if rc1 && rc2 {
+		if biz, ok := nd.viewDict[newV] ; !ok {
+			reqList := make([]Request, 1)
+			reqList[0] = req
+			nd.viewDict[newV] = viewDictItem{
+				reqList,0,0
+			}
+		} else {
+			nd.viewDict[newV].store = append(nd.viewDict[newV].store, req)
+		}
+	}
+
+	if nd.viewDict[newV][1] < req.inner.seq {
+		tmp:=nd.viewDict[newV]
+		nd.viewDict[newV] = viewDictItem{tmp[0], req.inner.seq, tmp[2]}
+	}
+
+	if nd.viewDict[newV][2] < maxm {
+		tmp:=nd.viewDict[newV]
+		nd.viewDict[newV] = viewDictItem{tmp[0], tmp[1], maxm}
+	}
+	if (!nd.viewInUse || newV > nd.view) && len(nd.viewDict[newV][0]) > 2*nd.f {
+		// process and send the view req
+		buf := bytes.Buffer{}
+		e := gob.NewEncoder()
+		reqList := make([]Request, 0)
+		for i:=range nd.viewDict[newV][0] {
+			//e.Encode(nd.viewDict[newV][0][i])
+			reqList = append(reqList, nd.viewDict[newV][0][i])
+		}
+		for j:=nd.viewDict[newV][1]; j<nd.viewDict[newV][2]; j++ {
+			if j == 0 {
+				continue
+			}
+			r, _ := nd.nodeMessageLog.get(TYPE_PRPR, j, nd.primary)
+			tmp := nd.createRequest(TYPE_PRPR, j, r.inner.msg)
+			reqList = append(reqList, tmp)
+			//e.Encode(tmp)
+		}
+		e.Encode(reqList)
+		out := nd.createRequest(TYPE_NEVW, 0, MsgType(buf.Bytes()))
+		nd.viewInUse = true
+		nd.primary = nd.view % nd.N
+		nd.active = make(map[DigType]ActiveItem)
+		nd.resetMsgDicts()
+		nd.clientMessageLog = make(map[clientMessageLogItem]Request)
+		nd.prepared = make(map[int]Request)
+		nd.seq = nd.viewDict[newV].holder2
+		nd.broadcast(out)
+	}
 }
 
-func (nd *Node) NewViewProcessPrePrepare() {
-
+func (nd *Node) NewViewProcessPrePrepare(prprList []Request) bool {
+	for _, r := range prprList {
+		if nd.VerifyMsg(r) && r.verifyDig() {
+			out := nd.createRequest(TYPE_PREP, r.inner.seq, r.inner.msg)
+			nd.broadcast(out)
+		} else {
+			return false
+		}
+	}
+	return true
 }
 
-func (nd *Node) NewViewProcessView() {
-
+func (nd *Node) NewViewProcessView(vchangeList []Request) bool {
+	for _, r := range vchangeList {
+		if !(nd.VerifyMsg(r) && r.verifyDig()) {
+			return false
+		}
+	}
+	return true
 }
 
-func (nd *Node) ProcessNewView() {
-
+func (nd *Node) ProcessNewView(req Request, clientID int) {
+	m := req.inner.msg
+	bufcurrent := bytes.Buffer{}
+	bufcurrent.Write([]bytes(m))
+	e := gob.NewDecoder(&m)
+	vchangeList := make([]Request, 0)
+	prprList := make([]Request, 0)
+	counter := 0
+	reqList := make([]Request, 0)
+	e.Decode(&reqList)
+	for _, r := range reqList {
+		if r.verifyDig() && nd.VerifyMsg(r) {
+			switch r.inner.reqtype {
+			case TYPE_VCHA:
+				vchangeList = append(vchangeList, r)
+				break
+			case TYPE_PRPR:
+				prprList = append(prprList, r)
+				break
+			}
+		}
+	}
+	if !nd.NewViewProcessView(vchangeList) {
+		myPrint(3,, "Failed view change")
+		return
+	}
+	if req.inner.view >= nd.view {
+		nd.view = req.inner.view
+		nd.viewInUse = true
+		nd.primary = nd.view % nd.N
+		nd.active = make(map[DigType]ActiveItem)
+		nd.resetMsgDicts()
+		nd.clientMessageLog = make(map[clientMessageLogItem]Request)
+		nd.prepared = make(map[int]Request)
+		nd.NewViewProcessPrePrepare(prprList)
+		myPrint(2, "New View accepted")
+	}
 }
 
-func (nd *Node) IsInNodeLog() {
-
+func (nd *Node) IsInNodeLog() bool {
+// deprecated
 }
 
 func (nd *Node) ProcessRequest() {
-
+// we use RPC so we don't need a central msg receiver
 }
 
 func (nd *Node) BeforeShutdown() {
