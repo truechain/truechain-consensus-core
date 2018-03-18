@@ -8,8 +8,8 @@ import (
 	"crypto/elliptic"
 	"math/big"
 	"net/rpc"
-	"github.com/alecthomas/gometalinter/_linters/github.com/client9/misspell"
-	"github.com/rogpeppe/godef/go/ast"
+	//"github.com/alecthomas/gometalinter/_linters/github.com/client9/misspell"
+	//"github.com/rogpeppe/godef/go/ast"
 	"encoding/base64"
 	"encoding/gob"
 	"bytes"
@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"os"
 	"github.com/alecthomas/repr"
-	"golang.org/x/tools/go/gcimporter15/testdata"
+	//"golang.org/x/tools/go/gcimporter15/testdata"
 )
 
 const SERVER_PORT = 40162
@@ -88,15 +88,22 @@ type nodeMsgLog struct {
 }
 
 func (nml *nodeMsgLog) get(typ int, seq int, id int) (Request, bool) {
-	if val, ok := nml.content[typ]; ok {
-		if val2, ok:= val[seq]; ok {
-			if val3, ok:=val2[id]; ok {
-				return val3, true
-			} else {
-				return Request{}, false
-			}
-		}
+	_, ok := nml.content[typ]
+
+	if !ok {
+		nml.content[typ] = make(map[int](map[int]Request))
+
 	}
+	_, ok2 := nml.content[typ][seq]
+	if !ok2 {
+		nml.content[typ][seq] = make(map[int]Request)
+
+	}
+	val, ok3 := nml.content[typ][seq][id]
+	if ok3 {
+		return val, true
+	}
+	return Request{}, false
 }
 
 func (nml *nodeMsgLog) set(typ int, seq int, id int, req Request) {
@@ -111,7 +118,7 @@ type commitDictItem struct {
 	req Request
 }
 
-type checkpointProofType []byte
+type checkpointProofType Request
 
 type viewDictItem struct {
 	store []Request
@@ -236,7 +243,7 @@ func (req *Request) addSig(privKey *ecdsa.PrivateKey) {
 		myPrint(3, "Error signing.")
 		return
 	}
-	req.dig = s
+	req.dig = DigType(s)
 	req.sig = msgSignature{sigr, sigs}
 }
 
@@ -476,17 +483,15 @@ func (nd *Node) serverLoop() {
 		myPrint(3, "Error in listening...")
 		return
 	}
-	counter := 0
-	// TODO: try client
+	//counter := 0
+	// TODO: add timer to try client
 	for {
 		c, err := ln.Accept()
 		if err != nil {
 			continue
 		}
 		go rpc.ServeConn(c)
-
-		// get events from the buffer
-		// TODO: finish server loop
+		// TODO: check if we missed anything
 	}
 }
 
@@ -538,9 +543,9 @@ func (nd *Node) HandleTimeout(dig DigType, view int) {
 		e.Encode(cp)
 	}
 	e.Encode(len(nd.prepared))
-	for k, v := range nd.prepared {
+	for k, _ := range nd.prepared {
 		r, _ := nd.nodeMessageLog.get(TYPE_PRPR, k, nd.primary) // old primary
-		e.Encode(v)
+		e.Encode(r)
 		counter := 0
 		for i := 1; i < nd.N; i++ {
 			if counter == 2*nd.f {
@@ -592,7 +597,7 @@ func (nd *Node) NewClientRequest(req Request, clientId int) {  // TODO: change t
 
 	if nd.primary == nd.id {
 		nd.seq = nd.seq + 1
-		m := nd.createRequest(TYPE_PRPR, nd.seq, req.dig)
+		m := nd.createRequest(TYPE_PRPR, nd.seq, MsgType(req.dig))
 		nd.nodeMessageLog.set(m.inner.reqtype, m.inner.seq, m.inner.id, m)
 		// write log
 		nd.broadcast(m)  // TODO: broadcast pre-prepare RPC path.
@@ -677,12 +682,14 @@ func (nd *Node) ProcessPrePrepare(req Request, clientId int) {
 			return
 		}
 	}
+	/*
 	if req.outer != "" {  // TODO. solve this
 		// TODO: check client message signatures
 	} else {
-		client_req := nil  // TODO
-	}
-	if val, ok := nd.active[req.dig]; !ok {
+		//client_req := nil  // TODO
+	}*/
+
+	if _, ok := nd.active[req.dig]; !ok {
 		reqTimer := time.NewTimer(time.Duration(nd.timeout) * time.Second)
 		go func(t *time.Timer, r Request){
 			<- reqTimer.C
@@ -692,7 +699,7 @@ func (nd *Node) ProcessPrePrepare(req Request, clientId int) {
 	}
 
 	nd.nodeMessageLog.set(req.inner.reqtype, req.inner.seq, req.inner.id, req)
-	m := nd.createRequest(TYPE_PREP, req.inner.seq, req.dig)  // TODO: check content!
+	m := nd.createRequest(TYPE_PREP, req.inner.seq, MsgType(req.dig))  // TODO: check content!
 	nd.nodeMessageLog.set(m.inner.reqtype, m.inner.seq, m.inner.id, m)
 	nd.recordPBFT(m)
 	nd.IncPrepDict(req.dig)
@@ -798,35 +805,35 @@ func (nd *Node) VerifyMsg(req Request) bool {
 	return dv && sc
 }
 
-func (nd *Node) ViewProcessPrepare(vPrepDict viewDict, vPreDict map[int]Request, lastCheckPoint int) bool {
+func (nd *Node) ViewProcessPrepare(vPrepDict viewDict, vPreDict map[int]Request, lastCheckPoint int) (bool, int) {
 	max:=0
 	counter := make(map[int]int)
 	for k1, v1 := range vPrepDict {
 		if _, ok := vPreDict[k1]; !ok {
-			return false
+			return false, 0
 		}
 		reqTemp:= vPreDict[k1]
 		dig := reqTemp.dig
 		if !nd.VerifyMsg(reqTemp) {
-			return false
+			return false, 0
 		}
-		for k2, v2 := range v1 {
+		for _, v2 := range v1 {
 			if !nd.VerifyMsg(v2) {
-				return false
+				return false, 0
 			}
 			if v2.dig != dig {
-				return false
+				return false, 0
 			}
 			if reqTemp.inner.id == v2.inner.id {
-				return false // cannot be sent from the same guy
+				return false, 0 // cannot be sent from the same guy
 			}
 			if v2.inner.seq < lastCheckPoint {
-				return false
+				return false, 0
 			}
 			if v2.inner.seq > max {
 				max = v2.inner.seq
 			}
-			if val3, ok3 := counter[v2.inner.seq]; !ok3 {
+			if _, ok3 := counter[v2.inner.seq]; !ok3 {
 				counter[v2.inner.seq]  = 1
 			} else {
 				counter[v2.inner.seq] += 1
@@ -835,11 +842,11 @@ func (nd *Node) ViewProcessPrepare(vPrepDict viewDict, vPreDict map[int]Request,
 	}
 	for k, v := range counter {
 		if v < 2 * nd.f {
-			return false
+			return false, 0
 		}
 		nd.addNodeHistory(vPreDict[k])
 	}
-	return true
+	return true, max
 }
 
 func (nd *Node) ProcessViewChange(req Request) {
@@ -859,24 +866,24 @@ func (nd *Node) ProcessViewChange(req Request) {
         #for r in self.view_dict[new_v]:
 
 	 */
-	vcheckList := make([]Request, 0)
+	//vcheckList := make([]Request, 0)
 	vpreDict := make(map[int]Request)
-	vPrepDict := make(viewDict)
+	vprepDict := make(viewDict)
 	m := req.inner.msg
 	bufm := bytes.Buffer{}
 	bufm.Write([]byte(m))
 	//// extract msgs in m
 	dec := gob.NewDecoder(&bufm)
 	var lenCkPf, preparedLen int
-	checkpointProofT := make([]checkpointProofType, 0)
-	vpreDict := make(map[int]Request)
-	vprepDict := make(viewDict)
+	checkpointProofT := make([]Request, 0)
+	vpreDict = make(map[int]Request)
+	vprepDict = make(viewDict)
 	dec.Decode(&lenCkPf)
 
 	for i:=0; i< lenCkPf; i++ {
 		ckpf := checkpointProofType{}
 		dec.Decode(&ckpf)
-		checkpointProofT = append(checkpointProofT, ckpf)
+		checkpointProofT = append(checkpointProofT, Request(ckpf))
 	}
 	dec.Decode(&preparedLen)
 	for j:=0; j< preparedLen; j++ {
@@ -900,39 +907,38 @@ func (nd *Node) ProcessViewChange(req Request) {
 			}
 		}
 	}
-	rc1 := nd.ViewProcessCheckPoint(checkpointProofT, req.inner.seq)  // fix the type of checkPointProofT
+	rc1 := nd.ViewProcessCheckPoint(&checkpointProofT, req.inner.seq)  // fix the type of checkPointProofT
 	rc2, maxm := nd.ViewProcessPrepare(vprepDict, vpreDict, req.inner.seq)
 	if rc1 && rc2 {
-		if biz, ok := nd.viewDict[newV] ; !ok {
+		if _, ok := nd.viewDict[newV] ; !ok {
 			reqList := make([]Request, 1)
 			reqList[0] = req
-			nd.viewDict[newV] = viewDictItem{
-				reqList,0,0
-			}
+			nd.viewDict[newV] = viewDictItem{reqList,0,0}
 		} else {
-			nd.viewDict[newV].store = append(nd.viewDict[newV].store, req)
+			vTemp := nd.viewDict[newV]
+			vTemp.store = append(vTemp.store, req)
+			nd.viewDict[newV] = vTemp
 		}
 	}
-
-	if nd.viewDict[newV][1] < req.inner.seq {
+	if nd.viewDict[newV].holder1 < req.inner.seq {
 		tmp:=nd.viewDict[newV]
-		nd.viewDict[newV] = viewDictItem{tmp[0], req.inner.seq, tmp[2]}
+		nd.viewDict[newV] = viewDictItem{tmp.store, req.inner.seq, tmp.holder2}
 	}
 
-	if nd.viewDict[newV][2] < maxm {
+	if nd.viewDict[newV].holder2 < maxm {
 		tmp:=nd.viewDict[newV]
-		nd.viewDict[newV] = viewDictItem{tmp[0], tmp[1], maxm}
+		nd.viewDict[newV] = viewDictItem{tmp.store, tmp.holder1, maxm}
 	}
-	if (!nd.viewInUse || newV > nd.view) && len(nd.viewDict[newV][0]) > 2*nd.f {
+	if (!nd.viewInUse || newV > nd.view) && len(nd.viewDict[newV].store) > 2*nd.f {
 		// process and send the view req
 		buf := bytes.Buffer{}
-		e := gob.NewEncoder()
+		e := gob.NewEncoder(&buf)
 		reqList := make([]Request, 0)
-		for i:=range nd.viewDict[newV][0] {
+		for i:=range nd.viewDict[newV].store {
 			//e.Encode(nd.viewDict[newV][0][i])
-			reqList = append(reqList, nd.viewDict[newV][0][i])
+			reqList = append(reqList, nd.viewDict[newV].store[i])
 		}
-		for j:=nd.viewDict[newV][1]; j<nd.viewDict[newV][2]; j++ {
+		for j:=nd.viewDict[newV].holder1; j<nd.viewDict[newV].holder2; j++ {
 			if j == 0 {
 				continue
 			}
@@ -978,11 +984,11 @@ func (nd *Node) NewViewProcessView(vchangeList []Request) bool {
 func (nd *Node) ProcessNewView(req Request, clientID int) {
 	m := req.inner.msg
 	bufcurrent := bytes.Buffer{}
-	bufcurrent.Write([]bytes(m))
-	e := gob.NewDecoder(&m)
+	bufcurrent.Write([]byte(m))
+	e := gob.NewDecoder(&bufcurrent)
 	vchangeList := make([]Request, 0)
 	prprList := make([]Request, 0)
-	counter := 0
+	//counter := 0
 	reqList := make([]Request, 0)
 	e.Decode(&reqList)
 	for _, r := range reqList {
@@ -998,7 +1004,7 @@ func (nd *Node) ProcessNewView(req Request, clientID int) {
 		}
 	}
 	if !nd.NewViewProcessView(vchangeList) {
-		myPrint(3,, "Failed view change")
+		myPrint(3, "Failed view change")
 		return
 	}
 	if req.inner.view >= nd.view {
@@ -1016,6 +1022,7 @@ func (nd *Node) ProcessNewView(req Request, clientID int) {
 
 func (nd *Node) IsInNodeLog() bool {
 // deprecated
+	return false
 }
 
 func (nd *Node) ProcessRequest() {
