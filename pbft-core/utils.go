@@ -16,7 +16,7 @@ type config struct {
 	Ports  	[]int
 }
 
-func myPrint(t int, args ...interface{}) {
+func myPrint(t int, format string, args ...interface{}) {
 	// t: log level
 	// 		0: information
 	//		1: emphasis
@@ -30,16 +30,16 @@ func myPrint(t int, args ...interface{}) {
 			
 		switch t {
 		case 0:  // info
-			fmt.Print("[ ]", args ...)
+			fmt.Printf("[ ]" + format, args...)
 			break
 		case 1: // emphasized
-			fmt.Print(blue("[.]"), args ...)
+			fmt.Printf(blue("[.]") + format, args...)
 			break
 		case 2: // warning
-			fmt.Print(yellow("[!]"), args ...)
+			fmt.Printf(yellow("[!]") + format, args...)
 			break
 		case 3:  // error
-			fmt.Print(red("[x]"), args ...)
+			fmt.Printf(red("[x]") + format, args...)
 		}	
 	}
 }
