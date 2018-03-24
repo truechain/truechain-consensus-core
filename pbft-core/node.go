@@ -311,6 +311,7 @@ type ProxyProcessCommitReply struct {
 
 type ProxyProcessViewChangeArg struct {
 	req Request
+	from int
 }
 
 type ProxyProcessViewChangeReply struct {
@@ -373,7 +374,7 @@ func (nd *Node) broadcast(req Request) {
 		nd.broadcastByRPC("Node.ProxyProcessCommit", arg, &reply)
 		break
 	case TYPE_VCHA:
-		arg := ProxyProcessViewChangeArg{req}
+		arg := ProxyProcessViewChangeArg{req, nd.id}  // a dummy from
 		reply := make([]interface{}, nd.N)
 		for k:= 0; k < nd.N; k++ {
 			reply[k] = &ProxyProcessViewChangeReply{}
@@ -419,7 +420,7 @@ func (nd *Node) ProxyProcessCommit(arg ProxyProcessCommitArg, reply *ProxyProces
 }
 
 func (nd *Node) ProxyProcessViewChange(arg ProxyProcessViewChangeArg, reply *ProxyProcessViewChangeReply) {
-	nd.ProcessViewChange(arg.req)
+	nd.ProcessViewChange(arg.req, arg.from)
 }
 
 func (nd *Node) ProxyProcessNewView(arg ProxyProcessNewViewArg, reply *ProxyProcessNewViewReply) {
@@ -431,7 +432,7 @@ func (nd *Node) ProxyProcessCheckpoint(arg ProxyProcessCheckpointArg, reply *Pro
 }
 
 // broadcast to all the peers
-func (nd *Node) broadcastByRPC(rpcPath string, arg interface, reply *[]interface) {
+func (nd *Node) broadcastByRPC(rpcPath string, arg interface{}, reply *[]interface{}) {
 	divCallList := make([]*rpc.Call, 0)
 	for ind, c := range nd.peers {
 		if ind == nd.id {
@@ -564,7 +565,7 @@ func (nd *Node) HandleTimeout(dig DigType, view int) {
 		}
 	}
 
-	viewChange := nd.createRequest(TYPE_VCHA, nd.lastStableCheckpoint, MsgType(b))
+	viewChange := nd.createRequest(TYPE_VCHA, nd.lastStableCheckpoint, MsgType(b.Bytes()))
 	nd.broadcast(viewChange) // TODO: broadcast view change RPC path.
 	nd.ProcessViewChange(viewChange, 0)
 }
@@ -849,7 +850,7 @@ func (nd *Node) ViewProcessPrepare(vPrepDict viewDict, vPreDict map[int]Request,
 	return true, max
 }
 
-func (nd *Node) ProcessViewChange(req Request) {
+func (nd *Node) ProcessViewChange(req Request, from int) {
 	myPrint(1, "Receiveed a view change req from " + strconv.Itoa(req.inner.id))
 	nd.addNodeHistory(req)
 	newV := req.inner.view
@@ -1071,7 +1072,6 @@ func Make(peers []*rpc.Client, me int, port int, view int, applyCh chan ApplyMsg
 	nd.timeout = 600
 	//nd.mu = sync.Mutex{}
 	nd.clientBuffer = ""
-	nd.port =
 	//nd.clientMu = sync.Mutex{}
 
 
