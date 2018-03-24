@@ -235,12 +235,12 @@ func (req *Request) addSig(privKey *ecdsa.PrivateKey) {
 	e := gob.NewEncoder(&b)
 	err := e.Encode(req.inner)
 	if err != nil {
-		myPrint(3, `failed to encode!`)
+		myPrint(3, "%s", `failed to encode!`)
 	}
 	s := getHash(string(b.Bytes()))
 	sigr, sigs, err := ecdsa.Sign(rand.Reader, privKey, []byte(s))
 	if err != nil {
-		myPrint(3, "Error signing.")
+		myPrint(3, "%s", "Error signing.")
 		return
 	}
 	req.dig = DigType(s)
@@ -252,7 +252,7 @@ func (req *Request) verifyDig() bool {
 	e := gob.NewEncoder(&b)
 	err := e.Encode(req.inner)
 	if err != nil {
-		myPrint(3, `failed to encode!`)
+		myPrint(3, "%s", `failed to encode!`)
 	}
 	s := getHash(string(b.Bytes()))
 	return s == string(req.dig)
@@ -444,7 +444,7 @@ func (nd *Node) broadcastByRPC(rpcPath string, arg interface{}, reply *[]interfa
 	for _, divCall := range divCallList {
 		divCallDone := <- divCall.Done
 		if divCallDone.Error != nil {
-			myPrint(3, "error happened in broadcasting " + rpcPath + "\n")
+			myPrint(3, "%s", "error happened in broadcasting " + rpcPath + "\n")
 		}
 	}
 }
@@ -481,7 +481,7 @@ func (nd *Node) serverLoop() {
 
 	ln, err := net.Listen("tcp", ":" + strconv.Itoa(nd.port))
 	if err != nil {
-		myPrint(3, "Error in listening...")
+		myPrint(3, "%s", "Error in listening...")
 		return
 	}
 	//counter := 0
@@ -527,7 +527,7 @@ func (nd *Node) HandleTimeout(dig DigType, view int) {
 		nd.mu.Unlock()
 		return
 	}
-	myPrint(2, "Timeout triggered.\n")
+	myPrint(2, "%s", "Timeout triggered.\n")
 	for k, v := range nd.active {
 		if k != dig {
 			v.t.Stop()
@@ -851,7 +851,7 @@ func (nd *Node) ViewProcessPrepare(vPrepDict viewDict, vPreDict map[int]Request,
 }
 
 func (nd *Node) ProcessViewChange(req Request, from int) {
-	myPrint(1, "Receiveed a view change req from " + strconv.Itoa(req.inner.id))
+	myPrint(1, "%s", "Receiveed a view change req from " + strconv.Itoa(req.inner.id))
 	nd.addNodeHistory(req)
 	newV := req.inner.view
 	if nd.view != req.inner.view || newV < nd.view {
@@ -1005,7 +1005,7 @@ func (nd *Node) ProcessNewView(req Request, clientID int) {
 		}
 	}
 	if !nd.NewViewProcessView(vchangeList) {
-		myPrint(3, "Failed view change")
+		myPrint(3,"%s",  "Failed view change")
 		return
 	}
 	if req.inner.view >= nd.view {
@@ -1017,7 +1017,7 @@ func (nd *Node) ProcessNewView(req Request, clientID int) {
 		nd.clientMessageLog = make(map[clientMessageLogItem]Request)
 		nd.prepared = make(map[int]Request)
 		nd.NewViewProcessPrePrepare(prprList)
-		myPrint(2, "New View accepted")
+		myPrint(2, "%s", "New View accepted")
 	}
 }
 
