@@ -1,6 +1,6 @@
 package pbft
 
-import "rand"
+import "math/rand"
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
