@@ -24,13 +24,35 @@ SOFTWARE.
 
 package pbft;
 
+import (
+	"os"
+	"log"
+	"fmt"
+)
+
 // const PORT_NUMBER = 40623
 // const MAX_FAIL = 1
 const OUTPUT_THRESHOLD = 1
 const BASE_PORT = 40540
 
-type config struct {
+type Config struct {
 	N 		int
 	IPList	[]string
 	Ports  	[]int
+	HOSTS_FILE string
+}
+
+func (cfg *Config) Generate_keys(){
+	N := 1000
+	KD := "keys/"
+	_, err := os.Stat(KD)
+	if os.IsNotExist(err) {
+		err := os.Mkdir(KD, 0777)
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	write_new_keys(N)
+	fmt.Printf("Generated %d keys in keys/ folder..\n", N)
 }

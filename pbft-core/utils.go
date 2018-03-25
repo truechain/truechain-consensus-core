@@ -65,7 +65,7 @@ func checkErr(e error) {
 	}
 }
 
-func getIPConfigs(s string) ([]string, []int) {
+func GetIPConfigs(s string) ([]string, []int) {
 	// s: config file path
 	myPrint(1, "Loading IP configs...\n")
 	contentB, err := ioutil.ReadFile(s)

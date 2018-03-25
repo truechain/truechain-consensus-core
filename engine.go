@@ -25,32 +25,20 @@ SOFTWARE.
 package main
 
 import (
-	"fmt"
+	//"fmt"
 	"os"
-  "path"
+    "path"
+	//"log"
 	"./pbft-core"
-	)
+)
 
-func (cfg *pbft.config) generate_keys(){
-	N := 1000
-	KD := "keys/"
-	_, err := os.Stat(KD)
-        if os.IsNotExist(err) {
-                err := os.Mkdir(KD, 0777)
-                if err != nil {
-                        log.Fatalln(err)
-                }
-        }
 
-	pbft.write_new_keys(N)
-	fmt.Printf("Generated %d keys in keys/ folder..\n", N)
-}
 
 func main(){
-	cfg := pbft.config{}
-	HOSTS_FILE = path.Join(os.Getenv("HOME"), "hosts")
+	cfg := pbft.Config{}
+	cfg.HOSTS_FILE = path.Join(os.Getenv("HOME"), "hosts")
 
-	cfg.IPList, cfg.Ports = getIPConfigs(pbft.HOSTS_FILE)
+	cfg.IPList, cfg.Ports = pbft.GetIPConfigs(cfg.HOSTS_FILE)
 	cfg.N = len(cfg.IPList)
-	cfg.generate_keys()
+	cfg.Generate_keys()
 }

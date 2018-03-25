@@ -37,7 +37,7 @@ import (
 func MakeTransportations(index int) []*rpc.Client {
 	// index: the index if the server itself
 	clientList := make([]*rpc.Client, 0)
-	lst, ports := getIPConfigs("ipconfig")
+	lst, ports := GetIPConfigs("ipconfig")
 	// serve RPC server
 	node := new(Node)
 	rpc.Register(node)
