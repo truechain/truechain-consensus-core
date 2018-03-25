@@ -17,6 +17,6 @@ To be added.
 
 ### How to contribute
 
-We need contributions from you. You are welcome to create github issues and contribute to the codebase. 
+We need contributions from you. You are welcome to create github issues and contribute to the codebase.
 
-To be added.
+We have a list of important tasks from Foundation, we welcome people who have related background to join our consensus design and implementation.
