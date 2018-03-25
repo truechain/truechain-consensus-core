@@ -39,8 +39,7 @@ func MakeTransportations(index int) []*rpc.Client {
 	clientList := make([]*rpc.Client, 0)
 	lst, ports := GetIPConfigs("ipconfig")
 	// serve RPC server
-	node := new(Node)
-	rpc.Register(node)
+	rpc.Register(&Node{})
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", ":" + strconv.Itoa(ports[index]))
 	checkErr(e)

@@ -34,6 +34,8 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"path/filepath"
+	"encoding/gob"
+	"bytes"
 )
 
 func GetCWD() string {
@@ -45,11 +47,16 @@ func GetCWD() string {
 }
 
 func write_new_keys(kcount int) {
+	gob.Register(&ecdsa.PrivateKey{})
+
 	for k:= 0; k < kcount; k++ {
 		sk, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		filename := fmt.Sprintf("sign%v.dat", k)
-		// FIXME: glob (??)
-		err := ioutil.WriteFile(path.Join(GetCWD(), "keys/", filename), sk.D.Bytes(), 0644)
+		// FIXME: gob (??)
+		buf := bytes.Buffer{}
+		e := gob.NewEncoder(&buf)
+		e.Encode(sk)
+		err := ioutil.WriteFile(path.Join(GetCWD(), "keys/", filename), buf.Bytes(), 0644)
 		if err != nil {
 			log.Fatal(err)
 		}

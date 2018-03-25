@@ -53,7 +53,7 @@ func main(){
 		<- svList[i].Nd.ListenReady
 	}
 	for i:=0; i<cfg.N; i++ {
-		svList[i].Nd.SetupConnections()
+		svList[i].Nd.SetupReady <- true  // make them to dial each other's RPCs
 	}
 
 	/////////////////

@@ -31,6 +31,11 @@ import (
 	"strconv"
 	//"fmt"
 	"crypto/ecdsa"
+	"fmt"
+	"io/ioutil"
+	"path"
+	"bytes"
+	"encoding/gob"
 )
 
 // import "fmt"
@@ -54,8 +59,9 @@ func (cl *Client) Start() {
 func (cl *Client) NewRequest(msg string, timeStamp int64) {
 	//broadcast the request
 	for i:=0; i<cl.Cfg.N; i++ {
-		req := Request{RequestInner{cl.Cfg.N,0, 0, TYPE_REQU, MsgType(msg), timeStamp, nil}, "", msgSignature{nil, nil}}  // the N-th party is the client
-		req.inner.outer = &req
+		//req := Request{RequestInner{cl.Cfg.N,0, 0, TYPE_REQU, MsgType(msg), timeStamp, nil}, "", msgSignature{nil, nil}}  // the N-th party is the client
+		req := Request{RequestInner{cl.Cfg.N,0, 0, TYPE_REQU, MsgType(msg), timeStamp}, "", msgSignature{nil, nil}}  // the N-th party is the client
+		//req.inner.outer = &req
 		req.addSig(&cl.privKey)
 		arg := ProxyNewClientRequestArg{req, cl.Me}
 		reply := ProxyNewClientRequestReply{}
@@ -78,7 +84,18 @@ func BuildClient(cfg Config, IP string, Port int, me int) *Client {
 		peers[i] = cl
 	}
 	cl.peers = peers
-
+	filename := fmt.Sprintf("sign%v.dat", cfg.N)
+	b, err := ioutil.ReadFile(path.Join(GetCWD(), "keys/", filename))
+	if err != nil {
+		myPrint(3, "Error reading keys %s.\n", filename)
+		return nil
+	}
+	bufm := bytes.Buffer{}
+	bufm.Write(b)
+	d := gob.NewDecoder(&bufm)
+	sk := ecdsa.PrivateKey{}
+	d.Decode(&sk)
+	cl.privKey = sk
 	// TODO: prepare ecdsa private key for the client
 	go cl.Start() // in case client has some initial logic
 	return cl
