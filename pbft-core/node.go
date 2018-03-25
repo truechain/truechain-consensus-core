@@ -454,7 +454,7 @@ func (nd *Node) executeInOrder(req Request) {
 	waiting := true
 	r := req
 	seq := req.inner.seq
-	dig := req.dig
+	dig := DigType(req.inner.msg)
 	ac := nd.active[dig]
 	if ac.req == nil {
 		return
@@ -683,37 +683,32 @@ func (nd *Node) ProcessPrePrepare(req Request, clientId int) {
 			return
 		}
 	}
-	/*
-	if req.outer != "" {  // TODO. solve this
-		// TODO: check client message signatures
-	} else {
-		//client_req := nil  // TODO
-	}*/
+	// TODO: check client signature
 
-	if _, ok := nd.active[req.dig]; !ok {
+	if _, ok := nd.active[DigType(req.inner.msg)]; !ok {
 		reqTimer := time.NewTimer(time.Duration(nd.timeout) * time.Second)
 		go func(t *time.Timer, r Request){
 			<- reqTimer.C
-			nd.HandleTimeout(req.dig, req.inner.view)
+			nd.HandleTimeout(DigType(req.inner.msg), req.inner.view)
 		}(reqTimer, req)
-		nd.active[req.dig] = ActiveItem{&req, reqTimer, clientId}
+		nd.active[DigType(req.inner.msg)] = ActiveItem{&req, reqTimer, clientId}
 	}
 
 	nd.nodeMessageLog.set(req.inner.reqtype, req.inner.seq, req.inner.id, req)
-	m := nd.createRequest(TYPE_PREP, req.inner.seq, MsgType(req.dig))  // TODO: check content!
+	m := nd.createRequest(TYPE_PREP, req.inner.seq, MsgType(req.inner.msg))  // TODO: check content!
 	nd.nodeMessageLog.set(m.inner.reqtype, m.inner.seq, m.inner.id, m)
 	nd.recordPBFT(m)
-	nd.IncPrepDict(req.dig)
+	nd.IncPrepDict(DigType(req.inner.msg))
 	nd.broadcast(m)
-	if nd.CheckPrepareMargin(req.dig, req.inner.seq) {  // TODO: check dig vs inner.msg
+	if nd.CheckPrepareMargin(DigType(req.inner.msg), req.inner.seq) {  // TODO: check dig vs inner.msg
 		nd.record("PREPARED sequence number " + strconv.Itoa(req.inner.seq) + "\n")
 		m := nd.createRequest(TYPE_COMM, req.inner.seq, req.inner.msg) // TODO: check content
 		nd.broadcast(m)
 		nd.nodeMessageLog.set(m.inner.reqtype, m.inner.seq, m.inner.id, m)
-		nd.IncCommDict(m.dig) //TODO: check content
+		nd.IncCommDict(DigType(req.inner.msg)) //TODO: check content
 		nd.recordPBFT(m)
 		nd.prepared[req.inner.seq] = m // or msg?
-		if nd.CheckCommittedMargin(m.dig, m) {
+		if nd.CheckCommittedMargin(DigType(req.inner.msg), m) {
 			nd.record("COMMITED seq number " + strconv.Itoa(m.inner.seq) + "\n")
 			nd.recordPBFTCommit(m)
 			nd.executeInOrder(m)
@@ -752,8 +747,8 @@ func (nd *Node) addNodeHistory(req Request) {
 
 func (nd *Node) ProcessPrepare(req Request, clientId int) {
 	nd.addNodeHistory(req)
-	nd.IncPrepDict(req.dig)
-	if nd.CheckPrepareMargin(req.dig, req.inner.seq) {  // TODO: check dig vs inner.msg
+	nd.IncPrepDict(DigType(req.inner.msg))
+	if nd.CheckPrepareMargin(DigType(req.inner.msg), req.inner.seq) {  // TODO: check dig vs inner.msg
 		nd.record("PREPARED sequence number " + strconv.Itoa(req.inner.seq) + "\n")
 		m := nd.createRequest(TYPE_COMM, req.inner.seq, req.inner.msg) // TODO: check content
 		nd.broadcast(m)
@@ -771,8 +766,8 @@ func (nd *Node) ProcessPrepare(req Request, clientId int) {
 
 func (nd *Node) ProcessCommit(req Request) {
 	nd.addNodeHistory(req)
-	nd.IncCommDict(req.dig)
-	if nd.CheckCommittedMargin(req.dig, req) {
+	nd.IncCommDict(DigType(req.inner.msg))
+	if nd.CheckCommittedMargin(DigType(req.inner.msg), req) {
 		nd.record("COMMITTED seq number " + strconv.Itoa(req.inner.seq))
 		nd.recordPBFTCommit(req)
 		nd.executeInOrder(req)
