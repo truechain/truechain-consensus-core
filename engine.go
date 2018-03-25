@@ -30,15 +30,36 @@ import (
     "path"
 	//"log"
 	"./pbft-core"
+	"strconv"
+	"fmt"
 )
 
-
+const NUM_QUEST = 1000
 
 func main(){
+
 	cfg := pbft.Config{}
 	cfg.HOSTS_FILE = path.Join(os.Getenv("HOME"), "hosts")
-
 	cfg.IPList, cfg.Ports = pbft.GetIPConfigs(cfg.HOSTS_FILE)
-	cfg.N = len(cfg.IPList)
+	cfg.N = len(cfg.IPList) - 1  // we assume the number of client is 1
 	cfg.Generate_keys()
+	/////////////////
+
+	svList := make([]*pbft.Server, cfg.N)
+	for i:=0; i<cfg.N; i++ {
+		svList[i] = pbft.BuildServer(cfg, cfg.IPList[i], cfg.Ports[i], i)
+	}
+	for i:=0; i<cfg.N; i++ {
+		<- svList[i].Nd.ListenReady
+	}
+	for i:=0; i<cfg.N; i++ {
+		svList[i].Nd.SetupConnections()
+	}
+
+	/////////////////
+	cl := pbft.BuildClient(cfg, cfg.IPList[cfg.N], cfg.Ports[cfg.N], 0)
+	for k:=0; k < NUM_QUEST; k++ {
+		cl.NewRequest("Request " + strconv.Itoa(k), k)
+	}
+	fmt.Println("Finish sending the requests.\n")
 }

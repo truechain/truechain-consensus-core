@@ -45,6 +45,7 @@ import (
 	"os"
 	"github.com/alecthomas/repr"
 	//"golang.org/x/tools/go/gcimporter15/testdata"
+	"log"
 )
 
 const SERVER_PORT = 40162
@@ -157,12 +158,15 @@ type hellowSignature big.Int
 type keyItem *ecdsa.PublicKey
 
 type Node struct {
+	cfg				Config
 	mu 				sync.Mutex
 	clientMu		sync.Mutex
 	peers 			[]*rpc.Client
 	port			int
 	max_requests	int
 	kill_flag		bool
+
+	ListenReady		chan bool
 
 	ecdsaKey		*ecdsa.PrivateKey
 	helloSignature	*hellowSignature
@@ -502,22 +506,24 @@ func (nd *Node) executeInOrder(req Request) {
 }
 
 func (nd *Node) serverLoop() {
-
-	ln, err := net.Listen("tcp", ":" + strconv.Itoa(nd.port))
+	addy, err := net.ResolveTCPAddr("tcp", "0.0.0.0:" + strconv.Itoa(nd.port))
 	if err != nil {
-		myPrint(3, "%s", "Error in listening...")
+		myPrint(3,  "Error in resolving tcp addr...\n")
+		return
+	}
+
+	ln, err := net.ListenTCP("tcp", addy)
+	if err != nil {
+		myPrint(3,  "Error in listening...\n")
 		return
 	}
 	//counter := 0
 	// TODO: add timer to try client
-	for {
-		c, err := ln.Accept()
-		if err != nil {
-			continue
-		}
-		go rpc.ServeConn(c)
-		// TODO: check if we missed anything
-	}
+
+	rpc.Register(Node{})
+	rpc.Accept(ln)
+
+	nd.ListenReady <- true  // trigger the connection
 }
 
 func (nd *Node) clean() {
@@ -605,7 +611,7 @@ func (nd *Node) NewClientRequest(req Request, clientId int) {  // TODO: change t
 			return
 		}
 	}
-
+	// TODO: do we need to verify client's request?
 	nd.mu.Lock()
 	if !nd.viewInUse {
 		nd.mu.Unlock()
@@ -1053,7 +1059,19 @@ func (nd *Node) BeforeShutdown() {
 	nd.outputLog.Close()
 }
 
-func Make(peers []*rpc.Client, me int, port int, view int, applyCh chan ApplyMsg, max_requests int) *Node {
+func (nd *Node) SetupConnections() {
+	peers := make([]*rpc.Client, nd.cfg.N)
+	for i:= 0; i<nd.cfg.N; i++ {
+		cl, err := rpc.Dial("tcp", cfg.IPList[i] + ":" + strconv.Itoa(cfg.Ports[i]))
+		if err != nil {
+			myPrint(3, "RPC error.\n")
+		}
+		peers[i] = cl
+	}
+	nd.peers = peers
+}
+
+func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, max_requests int) *Node {
 	gob.Register(ApplyMsg{})
 	gob.Register(RequestInner{})
 	gob.Register(Request{})
@@ -1075,8 +1093,9 @@ func Make(peers []*rpc.Client, me int, port int, view int, applyCh chan ApplyMsg
 	rpc.Register(Node{})
 
 	nd := &Node{}
-	nd.N = len(peers)
-	nd.peers = peers
+	nd.cfg = cfg
+	//nd.N = len(peers)
+	//nd.peers = peers
 	nd.f = (nd.N - 1) / 3
 	nd.lowBound = 0
 	nd.highBound = 0
@@ -1115,6 +1134,7 @@ func Make(peers []*rpc.Client, me int, port int, view int, applyCh chan ApplyMsg
 
 	nd.clientMessageLog = make(map[clientMessageLogItem]Request)
 	nd.InitializeKeys()
+	nd.ListenReady = make(chan bool)
 
 	go nd.serverLoop()
 	return nd

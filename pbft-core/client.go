@@ -24,6 +24,15 @@ SOFTWARE.
 
 package pbft;
 
+import (
+	"net/rpc"
+	"path"
+	"os"
+	"strconv"
+	"fmt"
+	"crypto/ecdsa"
+)
+
 // import "fmt"
 // import "net"
 
@@ -31,8 +40,46 @@ type Client struct {
 	IP string
 	Port int
 	Index int
+	Me int
+	Cfg *Config
+	privKey ecdsa.PrivateKey
+	peers []*rpc.Client  // directly contact Server.Nd
 }
 
 func (cl *Client) Start() {
 	myPrint(1, "Firing up client executioner...\n")
+
+}
+
+func (cl *Client) NewRequest(msg string, timeStamp i) {
+	//broadcast the request
+	for i:=0; i<cl.Cfg.N; i++ {
+		req := Request{RequestInner{cl.Cfg.N,0, 0, TYPE_REQU, msg, timeStamp, nil}, "", msgSignature{nil, nil}}  // the N-th party is the client
+		req.inner.outer = &req
+		req.addSig(&cl.privKey)
+		arg := ProxyNewClientRequestArg{req, cl.Me}
+		reply := ProxyNewClientRequestReply{}
+		cl.peers[i].Go("Node.NewClientRequest", arg, &reply, nil)
+	}
+}
+
+func BuildClient(cfg Config, IP string, Port int, me int) *Client {
+	cl := &Client{}
+	cl.IP = IP
+	cl.Port = Port
+	cl.Me = me
+	cl.Cfg = &cfg
+	peers := make([]*rpc.Client, cfg.N)
+	for i:= 0; i<cfg.N; i++ {
+		cl, err := rpc.Dial("tcp", cfg.IPList[i] + ":" + strconv.Itoa(cfg.Ports[i]))
+		if err != nil {
+			myPrint(3, "RPC error.\n")
+		}
+		peers[i] = cl
+	}
+	cl.peers = peers
+
+	// TODO: prepare ecdsa private key for the client
+	go cl.Start() // in case client has some initial logic
+	return cl
 }

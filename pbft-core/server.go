@@ -24,13 +24,44 @@ SOFTWARE.
 
 package pbft;
 
+import (
+	"path"
+	"os"
+	"net/rpc"
+	"strconv"
+	"fmt"
+)
+
 // import "fmt"
 
 type Server struct {
 	IP string
 	Port int
+	Nd *Node
+	Cfg *Config
 }
 
 func (sv *Server) Start() {
 	myPrint(1, "Firing up peer server...\n")
+}
+
+
+func BuildServer(cfg Config, IP string, Port int, me int) *Server {
+	sv := &Server{}
+	sv.IP = IP
+	sv.Port = Port
+
+	sv.Cfg = &cfg
+	applyChan := make(chan ApplyMsg)
+	go func(aC chan ApplyMsg){
+		for {
+			c := <- aC
+			myPrint(1, "New Log Item\n")
+			fmt.Println(c)
+		}
+	}(applyChan)
+	sv.Nd = Make(cfg, me, Port, 0, applyChan, 100)  // test 100 messages
+
+	go sv.Start() // in case the server has some initial logic
+	return sv
 }
