@@ -60,7 +60,7 @@ func (cl *Client) NewRequest(msg string, timeStamp int64) {
 	//broadcast the request
 	for i:=0; i<cl.Cfg.N; i++ {
 		//req := Request{RequestInner{cl.Cfg.N,0, 0, TYPE_REQU, MsgType(msg), timeStamp, nil}, "", msgSignature{nil, nil}}  // the N-th party is the client
-		req := Request{RequestInner{cl.Cfg.N,0, 0, TYPE_REQU, MsgType(msg), timeStamp}, "", msgSignature{nil, nil}}  // the N-th party is the client
+		req := Request{RequestInner{cl.Cfg.N,0, 0, TYPE_REQU, MsgType(msg), timeStamp}, "", MsgSignature{nil, nil}}  // the N-th party is the client
 		//req.inner.outer = &req
 		req.addSig(&cl.privKey)
 		arg := ProxyNewClientRequestArg{req, cl.Me}
