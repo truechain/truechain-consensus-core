@@ -431,32 +431,39 @@ func (nd *Node) broadcast(req Request) {
 	}
 }
 
-func (nd *Node) ProxyProcessPrePrepare(arg ProxyProcessPrePrepareArg, reply *ProxyProcessPrePrepareReply) {
+func (nd *Node) ProxyProcessPrePrepare(arg ProxyProcessPrePrepareArg, reply *ProxyProcessPrePrepareReply) error {
 	nd.ProcessPrePrepare(arg.req, arg.clientID)  // we don't have return value here
+	return nil
 }
 
-func (nd *Node) ProxyNewClientRequest(arg ProxyNewClientRequestArg, reply *ProxyNewClientRequestReply) {
+func (nd *Node) ProxyNewClientRequest(arg ProxyNewClientRequestArg, reply *ProxyNewClientRequestReply) error {
 	nd.NewClientRequest(arg.req, arg.clientID)  // we don't have return value here
+	return nil
 }
 
-func (nd *Node) ProxyProcessPrepare(arg ProxyProcessPrepareArg, reply *ProxyProcessPrepareReply) {
+func (nd *Node) ProxyProcessPrepare(arg ProxyProcessPrepareArg, reply *ProxyProcessPrepareReply) error {
 	nd.ProcessPrepare(arg.req, arg.clientID)  // we don't have return value here
+	return nil
 }
 
-func (nd *Node) ProxyProcessCommit(arg ProxyProcessCommitArg, reply *ProxyProcessCommitReply) {
+func (nd *Node) ProxyProcessCommit(arg ProxyProcessCommitArg, reply *ProxyProcessCommitReply) error {
 	nd.ProcessCommit(arg.req)  // we don't have return value here
+	return nil
 }
 
-func (nd *Node) ProxyProcessViewChange(arg ProxyProcessViewChangeArg, reply *ProxyProcessViewChangeReply) {
+func (nd *Node) ProxyProcessViewChange(arg ProxyProcessViewChangeArg, reply *ProxyProcessViewChangeReply) error {
 	nd.ProcessViewChange(arg.req, arg.from)
+	return nil
 }
 
-func (nd *Node) ProxyProcessNewView(arg ProxyProcessNewViewArg, reply *ProxyProcessNewViewReply) {
+func (nd *Node) ProxyProcessNewView(arg ProxyProcessNewViewArg, reply *ProxyProcessNewViewReply) error {
 	nd.ProcessNewView(arg.req, arg.clientId)
+	return nil
 }
 
-func (nd *Node) ProxyProcessCheckpoint(arg ProxyProcessCheckpointArg, reply *ProxyProcessCheckpointReply) {
+func (nd *Node) ProxyProcessCheckpoint(arg ProxyProcessCheckpointArg, reply *ProxyProcessCheckpointReply) error {
 	nd.ProcessCheckpoint(arg.req, arg.clientId)
+	return nil
 }
 
 // broadcast to all the peers
