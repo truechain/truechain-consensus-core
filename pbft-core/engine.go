@@ -1,5 +1,0 @@
-package pbft;
-
-func main(){
-
-}

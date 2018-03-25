@@ -22,15 +22,35 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-package pbft;
+package main
 
-// const PORT_NUMBER = 40623
-// const MAX_FAIL = 1
-const OUTPUT_THRESHOLD = 1
-const BASE_PORT = 40540
+import (
+	"fmt"
+	"os"
+  "path"
+	"./pbft-core"
+	)
 
-type config struct {
-	N 		int
-	IPList	[]string
-	Ports  	[]int
+func (cfg *pbft.config) generate_keys(){
+	N := 1000
+	KD := "keys/"
+	_, err := os.Stat(KD)
+        if os.IsNotExist(err) {
+                err := os.Mkdir(KD, 0777)
+                if err != nil {
+                        log.Fatalln(err)
+                }
+        }
+
+	pbft.write_new_keys(N)
+	fmt.Printf("Generated %d keys in keys/ folder..\n", N)
+}
+
+func main(){
+	cfg := pbft.config{}
+	HOSTS_FILE = path.Join(os.Getenv("HOME"), "hosts")
+
+	cfg.IPList, cfg.Ports = getIPConfigs(pbft.HOSTS_FILE)
+	cfg.N = len(cfg.IPList)
+	cfg.generate_keys()
 }

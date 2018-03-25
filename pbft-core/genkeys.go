@@ -22,15 +22,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-package pbft;
+package pbft
 
-// const PORT_NUMBER = 40623
-// const MAX_FAIL = 1
-const OUTPUT_THRESHOLD = 1
-const BASE_PORT = 40540
+import (
+	"os"
+	"fmt"
+	"log"
+	"path"
+	"io/ioutil"
+	"crypto/rand"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"path/filepath"
+)
 
-type config struct {
-	N 		int
-	IPList	[]string
-	Ports  	[]int
+func GetCWD() string {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		log.Fatal(err)
+	}
+	return dir
+}
+
+func write_new_keys(kcount int) {
+	for k:= 0; k < kcount; k++ {
+		sk, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		filename := fmt.Sprintf("sign%v.dat", k)
+		// FIXME: glob (??)
+		err := ioutil.WriteFile(path.Join(GetCWD(), "keys/", filename), sk.D.Bytes(), 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
