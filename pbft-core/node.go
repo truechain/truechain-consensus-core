@@ -209,7 +209,7 @@ type Node struct {
 type reqCounter struct {
 	number int
 	prepared bool
-	req Request
+	req *Request
 }
 
 type Log struct {
@@ -248,7 +248,7 @@ type Request struct {
 func (nd *Node) createRequest(reqType int, seq int, msg MsgType) Request {
 	key := nd.ecdsaKey
 	m := RequestInner{nd.id, seq, nd.view, reqType, msg, -1, nil}
-	req := Request{m, nil, nil}
+	req := Request{m, "", msgSignature{nil, nil}}
 	req.inner.outer = &req
 	req.addSig(key)
 	return req
@@ -600,7 +600,7 @@ func (nd *Node) NewClientRequest(req Request, clientId int) {  // TODO: change t
 			nd.active[req.dig] = ActiveItem{&req, v.t, v.clientId}
 			if v2, ok2 := nd.commDict[req.dig]; ok2 && v2.prepared{
 				msg := v2.req
-				nd.executeInOrder(msg)
+				nd.executeInOrder(*msg)
 			}
 			return
 		}
@@ -686,7 +686,7 @@ func (nd *Node) CheckCommittedMargin(dig DigType, req Request) bool {
 					//if ok && val.inner.msg == dig {
 					if valt, okt := nd.commDict[dig]; okt {
 						valt.prepared = true
-						valt.req = req
+						valt.req = &req
 						nd.commDict[dig] = valt
 						return true
 					}
