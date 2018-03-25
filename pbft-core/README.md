@@ -1,4 +1,5 @@
-### PBFT-Core
+# PBFT-Core
+===
 
 *These codes have not gone through reviews. Please use them with cautions*
 
@@ -6,15 +7,15 @@ This code base is an ongoing implementation of Practical Byzantine Fault Toleran
 
 Although there exists a bunch of existing PBFT implementations, we decide to write our own version to get fully control of every details and to conveniently make necessary extensions so that it could fit into the hybrid consensus protocol (which requires more than a standard PBFT). 
 
-###### Benchmark
+### Benchmark
 
 To be added.
 
-###### How to re-use
+### How to re-use
 
 To be added.
 
-###### How to contribute
+### How to contribute
 
 We need contributions from you. You are welcome to create github issues and contribute to the codebase. 
 
