@@ -3,6 +3,7 @@
 - [ ] gRPC secure with TLS
 - [ ] add / segregate server/client from engine.go
 - [ ] read from config.yaml instead
+- [ ] refactor and review, all naive errors like unexportable names in packages, security issues etc..
 
 ### transportation.go
 
@@ -47,4 +48,3 @@ pbft-core/node.go:653:43: cannot use nil as type Request in field value
 - [ ] nd.IncCommDict(m.dig) //TODO  check content
 - [ ] #TODO (NO PIGGYBACK)
 - [ ] // TODO  set up ECDSA
-
