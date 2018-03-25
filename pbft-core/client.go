@@ -90,11 +90,14 @@ func BuildClient(cfg Config, IP string, Port int, me int) *Client {
 		myPrint(3, "Error reading keys %s.\n", filename)
 		return nil
 	}
+	fmt.Println(b)
 	bufm := bytes.Buffer{}
 	bufm.Write(b)
+	gob.Register(&ecdsa.PrivateKey{})
 	d := gob.NewDecoder(&bufm)
 	sk := ecdsa.PrivateKey{}
 	d.Decode(&sk)
+	fmt.Println(sk)
 	cl.privKey = sk
 	// TODO: prepare ecdsa private key for the client
 	go cl.Start() // in case client has some initial logic
