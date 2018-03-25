@@ -59,7 +59,7 @@ func main(){
 	/////////////////
 	cl := pbft.BuildClient(cfg, cfg.IPList[cfg.N], cfg.Ports[cfg.N], 0)
 	for k:=0; k < NUM_QUEST; k++ {
-		cl.NewRequest("Request " + strconv.Itoa(k), k)
+		cl.NewRequest("Request " + strconv.Itoa(k), int64(k))
 	}
 	fmt.Println("Finish sending the requests.\n")
 }

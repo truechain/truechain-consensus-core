@@ -45,7 +45,7 @@ import (
 	"os"
 	"github.com/alecthomas/repr"
 	//"golang.org/x/tools/go/gcimporter15/testdata"
-	"log"
+	//"log"
 )
 
 const SERVER_PORT = 40162
@@ -1062,7 +1062,7 @@ func (nd *Node) BeforeShutdown() {
 func (nd *Node) SetupConnections() {
 	peers := make([]*rpc.Client, nd.cfg.N)
 	for i:= 0; i<nd.cfg.N; i++ {
-		cl, err := rpc.Dial("tcp", cfg.IPList[i] + ":" + strconv.Itoa(cfg.Ports[i]))
+		cl, err := rpc.Dial("tcp", nd.cfg.IPList[i] + ":" + strconv.Itoa(nd.cfg.Ports[i]))
 		if err != nil {
 			myPrint(3, "RPC error.\n")
 		}
