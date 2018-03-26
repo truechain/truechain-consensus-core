@@ -34,4 +34,6 @@ We have a list of important tasks from Foundation. We welcome people who have re
 
 ### LICENSE
 
-The MIT License, a copy of which is included within all files in the codebase.
+The Apache License (2.0).
+
+A copy of the header is included within all files in the codebase along with the full LICENSE txt file in project's root folder.

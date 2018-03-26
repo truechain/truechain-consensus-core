@@ -1,28 +1,20 @@
 /*
-The MIT License (MIT)
-
 Copyright (c) 2018 TrueChain Foundation
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 
-package pbft;
+package pbft
 
 import (
 	"net/rpc"
@@ -30,25 +22,25 @@ import (
 	//"os"
 	"strconv"
 	//"fmt"
+	"bytes"
 	"crypto/ecdsa"
+	"encoding/gob"
 	"fmt"
 	"io/ioutil"
 	"path"
-	"bytes"
-	"encoding/gob"
 )
 
 // import "fmt"
 // import "net"
 
 type Client struct {
-	IP string
-	Port int
-	Index int
-	Me int
-	Cfg *Config
+	IP      string
+	Port    int
+	Index   int
+	Me      int
+	Cfg     *Config
 	privKey ecdsa.PrivateKey
-	peers []*rpc.Client  // directly contact Server.Nd
+	peers   []*rpc.Client // directly contact Server.Nd
 }
 
 func (cl *Client) Start() {
@@ -58,9 +50,9 @@ func (cl *Client) Start() {
 
 func (cl *Client) NewRequest(msg string, timeStamp int64) {
 	//broadcast the request
-	for i:=0; i<cl.Cfg.N; i++ {
+	for i := 0; i < cl.Cfg.N; i++ {
 		//req := Request{RequestInner{cl.Cfg.N,0, 0, TYPE_REQU, MsgType(msg), timeStamp, nil}, "", msgSignature{nil, nil}}  // the N-th party is the client
-		req := Request{RequestInner{cl.Cfg.N,0, 0, TYPE_REQU, MsgType(msg), timeStamp}, "", MsgSignature{nil, nil}}  // the N-th party is the client
+		req := Request{RequestInner{cl.Cfg.N, 0, 0, TYPE_REQU, MsgType(msg), timeStamp}, "", MsgSignature{nil, nil}} // the N-th party is the client
 		//req.inner.outer = &req
 		req.addSig(&cl.privKey)
 		arg := ProxyNewClientRequestArg{req, cl.Me}
@@ -76,8 +68,8 @@ func BuildClient(cfg Config, IP string, Port int, me int) *Client {
 	cl.Me = me
 	cl.Cfg = &cfg
 	peers := make([]*rpc.Client, cfg.N)
-	for i:= 0; i<cfg.N; i++ {
-		cl, err := rpc.Dial("tcp", cfg.IPList[i] + ":" + strconv.Itoa(cfg.Ports[i]))
+	for i := 0; i < cfg.N; i++ {
+		cl, err := rpc.Dial("tcp", cfg.IPList[i]+":"+strconv.Itoa(cfg.Ports[i]))
 		if err != nil {
 			myPrint(3, "RPC error.\n")
 		}

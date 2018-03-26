@@ -1,6 +1,23 @@
-\#*
-.\#*
-.*~
+# backup files
 *~
+*#
+.#*
+\#*
+
+# editor file artifacts
+.*.sw*
+.idea
+
+# installed platform-specific binaries
+engine
+/bin
+.DS_Store
+.project
+
+# log data
+*commit*.txt
+*log*.txt
+
+# crypto waste
 *.dat
 *.pem
