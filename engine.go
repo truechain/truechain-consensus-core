@@ -35,7 +35,7 @@ func main() {
 	cfg.HOSTS_FILE = path.Join(os.Getenv("HOME"), "hosts")
 	cfg.IPList, cfg.Ports = pbft.GetIPConfigs(cfg.HOSTS_FILE)
 	cfg.N = len(cfg.IPList) - 1 // we assume the number of client is 1
-	cfg.Generate_keys()
+	cfg.GenerateKeys()
 	/////////////////
 
 	svList := make([]*pbft.Server, cfg.N)

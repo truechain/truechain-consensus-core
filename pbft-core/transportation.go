@@ -35,11 +35,11 @@ func MakeTransportations(index int) []*rpc.Client {
 	rpc.Register(&Node{})
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", ":"+strconv.Itoa(ports[index]))
-	checkErr(e)
+	CheckErr(e)
 	go http.Serve(l, nil)
 	for ind, val := range lst {
 		client, e := rpc.DialHTTP("tcp", val+":"+strconv.Itoa(ports[ind]))
-		checkErr(e)
+		CheckErr(e)
 		clientList = append(clientList, client)
 	}
 	return clientList

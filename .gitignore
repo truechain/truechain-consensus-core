@@ -9,12 +9,16 @@
 .idea
 
 # installed platform-specific binaries
-engine
 /bin
 .DS_Store
 .project
 
+## golang dlv / build
+engine
+debug
+
 # log data
+logs/
 *commit*.txt
 *log*.txt
 

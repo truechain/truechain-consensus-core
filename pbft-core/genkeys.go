@@ -38,7 +38,7 @@ func GetCWD() string {
 	return dir
 }
 
-func write_new_keys(kcount int) {
+func WriteNewKeys(kcount int, kdir string) {
 	gob.Register(&ecdsa.PrivateKey{})
 
 	for k := 0; k < kcount; k++ {
@@ -48,7 +48,7 @@ func write_new_keys(kcount int) {
 		buf := bytes.Buffer{}
 		e := gob.NewEncoder(&buf)
 		e.Encode(sk)
-		err := ioutil.WriteFile(path.Join(GetCWD(), "keys/", filename), buf.Bytes(), 0644)
+		err := ioutil.WriteFile(path.Join(kdir, filename), buf.Bytes(), 0644)
 		if err != nil {
 			log.Fatal(err)
 		}

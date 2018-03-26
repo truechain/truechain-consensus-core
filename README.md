@@ -16,8 +16,7 @@ To be added.
 Run the following:
 
 ```
-go build engine.go
-./engine
+go build engine.go && ./engine
 ```
 
 This triggers both server and client subroutines and displays progress of key signing, data exchange and ledger log is written to the same folder.
@@ -28,9 +27,9 @@ To be added.
 
 ### How to contribute
 
-We need contributions from you. You are welcome to create github issues and contribute to the codebase.
-
+We need contributions from you. You are welcome to create github issues and contribute to the codebase. Developer Guide could be found in `docs/DEV.md`.
 We have a list of important tasks from Foundation. We welcome people who have related background to join our consensus design and implementation.
+
 
 ### LICENSE
 

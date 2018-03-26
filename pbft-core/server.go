@@ -34,7 +34,7 @@ type Server struct {
 }
 
 func (sv *Server) Start() {
-	myPrint(1, "Firing up peer server...\n")
+	MyPrint(1, "Firing up peer server...\n")
 }
 
 func BuildServer(cfg Config, IP string, Port int, me int) *Server {
@@ -47,7 +47,7 @@ func BuildServer(cfg Config, IP string, Port int, me int) *Server {
 	go func(aC chan ApplyMsg) {
 		for {
 			c := <-aC
-			myPrint(1, "New Log Item\n")
+			MyPrint(1, "New Log Item\n")
 			fmt.Println(c)
 		}
 	}(applyChan)

@@ -21,10 +21,10 @@ import "github.com/fatih/color"
 import "io/ioutil"
 
 // import "io"
-// import "os"
+import "os"
 import "strings"
 
-func myPrint(t int, format string, args ...interface{}) {
+func MyPrint(t int, format string, args ...interface{}) {
 	// t: log level
 	// 		0: information
 	//		1: emphasis
@@ -52,22 +52,30 @@ func myPrint(t int, format string, args ...interface{}) {
 	}
 }
 
-func checkErr(e error) {
+func CheckErr(e error) {
 	if e != nil {
 		panic(e)
 	}
 }
 
+func MakeDirIfNot(dir string) {
+	_, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		err := os.Mkdir(dir, 0777)
+		CheckErr(err)
+	}
+}
+
 func GetIPConfigs(s string) ([]string, []int) {
 	// s: config file path
-	myPrint(1, "Loading IP configs...\n")
+	MyPrint(1, "Loading IP configs...\n")
 	contentB, err := ioutil.ReadFile(s)
-	checkErr(err)
+	CheckErr(err)
 	content := string(contentB)
 	lst := strings.Fields(content)
 	ports := make([]int, 0)
 	for k, v := range lst {
-		myPrint(0, string(k), v)
+		MyPrint(0, string(k), v)
 		ports = append(ports, BASE_PORT+k)
 	}
 	return lst, ports

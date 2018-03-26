@@ -261,22 +261,22 @@ func (nd *Node) createRequest(reqType int, seq int, msg MsgType) Request {
 }
 
 func (req *Request) addSig(privKey *ecdsa.PrivateKey) {
-	myPrint(1, "adding signature.\n")
+	MyPrint(1, "adding signature.\n")
 	gob.Register(&RequestInner{})
 	b := bytes.Buffer{}
 	e := gob.NewEncoder(&b)
 	err := e.Encode(req.Inner)
 	if err != nil {
-		myPrint(3, "%s", `failed to encode!\n`)
+		MyPrint(3, "%s", `failed to encode!\n`)
 		fmt.Println(err)
 	}
 	s := getHash(string(b.Bytes()))
-	myPrint(1, "digest %s.\n", string(s))
+	MyPrint(1, "digest %s.\n", string(s))
 	req.Dig = DigType(s)
 	if privKey != nil {
 		sigr, sigs, err := ecdsa.Sign(rand.Reader, privKey, []byte(s))
 		if err != nil {
-			myPrint(3, "%s", "Error signing.")
+			MyPrint(3, "%s", "Error signing.")
 			return
 		}
 
@@ -289,7 +289,7 @@ func (req *Request) verifyDig() bool {
 	e := gob.NewEncoder(&b)
 	err := e.Encode(req.Inner)
 	if err != nil {
-		myPrint(3, "%s", `failed to encode!`)
+		MyPrint(3, "%s", `failed to encode!`)
 	}
 	s := getHash(string(b.Bytes()))
 	return s == string(req.Dig)
@@ -480,7 +480,7 @@ func (nd *Node) broadcastByRPC(rpcPath string, arg interface{}, reply *[]interfa
 	for _, divCall := range divCallList {
 		divCallDone := <-divCall.Done
 		if divCallDone.Error != nil {
-			myPrint(3, "%s", "error happened in broadcasting "+rpcPath+"\n")
+			MyPrint(3, "%s", "error happened in broadcasting "+rpcPath+"\n")
 		}
 	}
 }
@@ -514,16 +514,17 @@ func (nd *Node) executeInOrder(req Request) {
 }
 
 func (nd *Node) serverLoop() {
-	myPrint(1, "[%d] Entering server loop.\n", nd.id)
+	MyPrint(1, "[%d] Entering server loop.\n", nd.id)
 	addy, err := net.ResolveTCPAddr("tcp", "0.0.0.0:"+strconv.Itoa(nd.port))
 	if err != nil {
-		myPrint(3, "Error in resolving tcp addr...\n")
+		MyPrint(3, "Error in resolving tcp addr...\n")
 		return
 	}
 
 	ln, err := net.ListenTCP("tcp", addy)
 	if err != nil {
-		myPrint(3, "Error in listening...\n")
+		MyPrint(3, "Error in listening... \n")
+		MyPrint(2, err.Error() + "\n")
 		return
 	}
 	//counter := 0
@@ -533,7 +534,7 @@ func (nd *Node) serverLoop() {
 	go rpc.Accept(ln)
 
 	nd.ListenReady <- true // trigger the connection
-	myPrint(1, "[%d] Ready to listen.\n", nd.id)
+	MyPrint(1, "[%d] Ready to listen.\n", nd.id)
 }
 
 func (nd *Node) clean() {
@@ -567,7 +568,7 @@ func (nd *Node) handleTimeout(dig DigType, view int) {
 		nd.mu.Unlock()
 		return
 	}
-	myPrint(2, "%s", "Timeout triggered.\n")
+	MyPrint(2, "%s", "Timeout triggered.\n")
 	for k, v := range nd.active {
 		if k != dig {
 			v.t.Stop()
@@ -652,7 +653,7 @@ func (nd *Node) initializeKeys() {
 		filename := fmt.Sprintf("sign%v.dat", i)
 		b, err := ioutil.ReadFile(path.Join(GetCWD(), "keys/", filename))
 		if err != nil {
-			myPrint(3, "Error reading keys %s.\n", filename)
+			MyPrint(3, "Error reading keys %s.\n", filename)
 			return
 		}
 		bufm := bytes.Buffer{}
@@ -903,7 +904,7 @@ func (nd *Node) viewProcessPrepare(vPrepDict viewDict, vPreDict map[int]Request,
 }
 
 func (nd *Node) processViewChange(req Request, from int) {
-	myPrint(1, "%s", "Receiveed a view change req from "+strconv.Itoa(req.Inner.Id))
+	MyPrint(1, "%s", "Receiveed a view change req from "+strconv.Itoa(req.Inner.Id))
 	nd.addNodeHistory(req)
 	newV := req.Inner.View
 	if nd.view != req.Inner.View || newV < nd.view {
@@ -1057,7 +1058,7 @@ func (nd *Node) processNewView(req Request, clientID int) {
 		}
 	}
 	if !nd.newViewProcessView(vchangeList) {
-		myPrint(3, "%s", "Failed view change")
+		MyPrint(3, "%s", "Failed view change")
 		return
 	}
 	if req.Inner.View >= nd.view {
@@ -1069,7 +1070,7 @@ func (nd *Node) processNewView(req Request, clientID int) {
 		nd.clientMessageLog = make(map[clientMessageLogItem]Request)
 		nd.prepared = make(map[int]Request)
 		nd.newViewProcessPrePrepare(prprList)
-		myPrint(2, "%s", "New View accepted")
+		MyPrint(2, "%s", "New View accepted")
 	}
 }
 
@@ -1088,12 +1089,12 @@ func (nd *Node) beforeShutdown() {
 
 func (nd *Node) setupConnections() {
 	<-nd.SetupReady
-	myPrint(1, "[%d] Begin to setup RPC connections.\n", nd.id)
+	MyPrint(1, "[%d] Begin to setup RPC connections.\n", nd.id)
 	peers := make([]*rpc.Client, nd.cfg.N)
 	for i := 0; i < nd.cfg.N; i++ {
 		cl, err := rpc.Dial("tcp", nd.cfg.IPList[i]+":"+strconv.Itoa(nd.cfg.Ports[i]))
 		if err != nil {
-			myPrint(3, "RPC error.\n")
+			MyPrint(3, "RPC error.\n")
 		}
 		peers[i] = cl
 	}
@@ -1150,11 +1151,15 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, max_req
 	nd.id = me
 	nd.applyCh = applyCh
 
-	fi, err := os.Create("pbftlog" + strconv.Itoa(nd.id) + ".txt")
+	nd.cfg.LD = path.Join(GetCWD(), "logs/")
+	// kfpath := path.Join(cfg.KD, filename)
+
+	MakeDirIfNot(nd.cfg.LD) //handles 'already exists'
+	fi, err := os.Create(path.Join(nd.cfg.LD, "pbftlog" + strconv.Itoa(nd.id) + ".txt"))
 	if err != nil {
 		nd.outputLog = fi
 	}
-	fi2, err2 := os.Create("pbftcommit" + strconv.Itoa(nd.id) + ".txt")
+	fi2, err2 := os.Create(path.Join(nd.cfg.LD, "pbftcommit" + strconv.Itoa(nd.id) + ".txt"))
 	if err2 != nil {
 		nd.commitLog = fi2
 	}

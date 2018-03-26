@@ -44,7 +44,7 @@ type Client struct {
 }
 
 func (cl *Client) Start() {
-	myPrint(1, "Firing up client executioner...\n")
+	MyPrint(1, "Firing up client executioner...\n")
 
 }
 
@@ -71,15 +71,16 @@ func BuildClient(cfg Config, IP string, Port int, me int) *Client {
 	for i := 0; i < cfg.N; i++ {
 		cl, err := rpc.Dial("tcp", cfg.IPList[i]+":"+strconv.Itoa(cfg.Ports[i]))
 		if err != nil {
-			myPrint(3, "RPC error.\n")
+			MyPrint(3, "RPC error.\n")
 		}
 		peers[i] = cl
 	}
 	cl.peers = peers
 	filename := fmt.Sprintf("sign%v.dat", cfg.N)
-	b, err := ioutil.ReadFile(path.Join(GetCWD(), "keys/", filename))
+	kfpath := path.Join(cfg.KD, filename)
+	b, err := ioutil.ReadFile(kfpath)
 	if err != nil {
-		myPrint(3, "Error reading keys %s.\n", filename)
+		MyPrint(3, "Error reading keys %s.\n", kfpath)
 		return nil
 	}
 	fmt.Println(b)

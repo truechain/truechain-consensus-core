@@ -17,9 +17,10 @@ limitations under the License.
 package pbft
 
 import (
-	"fmt"
-	"log"
-	"os"
+	// "fmt"
+	// "log"
+	// "os"
+	"path"
 )
 
 // const PORT_NUMBER = 40623
@@ -29,22 +30,17 @@ const BASE_PORT = 40540
 
 type Config struct {
 	N          int
+	KD				 string
+	LD				 string
 	IPList     []string
 	Ports      []int
 	HOSTS_FILE string
 }
 
-func (cfg *Config) Generate_keys() {
-	N := 1000
-	KD := "keys/"
-	_, err := os.Stat(KD)
-	if os.IsNotExist(err) {
-		err := os.Mkdir(KD, 0777)
-		if err != nil {
-			log.Fatalln(err)
-		}
-	}
-
-	write_new_keys(N)
-	fmt.Printf("Generated %d keys in keys/ folder..\n", N)
+func (cfg *Config) GenerateKeys() {
+	IdCount := 1000
+	cfg.KD = path.Join(GetCWD(), "keys/")
+	MakeDirIfNot(cfg.KD)
+	WriteNewKeys(IdCount, cfg.KD)
+	MyPrint(1, "Generated %d keys in %s folder..\n", IdCount, cfg.KD)
 }
