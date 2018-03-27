@@ -134,7 +134,7 @@ Command failed: no type entry found, use 'types' for a list of valid types
 
 Type `next` or `n`:
 
-```
+```go
 (dlv) n
 > _/home/username/truechain-consensus-core/pbft-core.(*Client).NewRequest() ./pbft-core/client.go:57 (hits goroutine(1):1 total:1) (PC: 0x7d27f0)
 Warning: debugging optimized function
@@ -153,7 +153,7 @@ Warning: debugging optimized function
 
 ### Print out a struct, let's dive into the issue
 
-```
+```go
 (dlv) print cl.privKey
 crypto/ecdsa.PrivateKey {
 	PublicKey: crypto/ecdsa.PublicKey {
@@ -166,7 +166,7 @@ crypto/ecdsa.PrivateKey {
 
 hmmm, what's cl anyway?
 
-```
+```go
 (dlv) print cl
 *_/home/username/truechain-consensus-core/pbft-core.Client {
 	IP: "127.0.0.1",
@@ -195,7 +195,7 @@ hmmm, what's cl anyway?
 
 hmm, what's `rpc.Client` struct like for `cl.peers` ?
 
-```
+```go
 (dlv) print cl.peers
 []*net/rpc.Client len: 3, cap: 3, [
 	*{
@@ -230,7 +230,7 @@ hmm, what's `rpc.Client` struct like for `cl.peers` ?
 
 hmm, nope just 1 is enough:
 
-```
+```go
 (dlv) print cl.peers[0]
 *net/rpc.Client {
 	codec: net/rpc.ClientCodec(*net/rpc.gobClientCodec) *{
@@ -252,7 +252,7 @@ hmm, nope just 1 is enough:
 
 hmm, enough digression (sorry!), again.. what's `cl.privKey` like?
 
-```
+```go
 (dlv) print cl.privKey
 crypto/ecdsa.PrivateKey {
 	PublicKey: crypto/ecdsa.PublicKey {
@@ -260,6 +260,76 @@ crypto/ecdsa.PrivateKey {
 		X: *math/big.Int nil,
 		Y: *math/big.Int nil,},
 	D: *math/big.Int nil,}
-(dlv) 
 
 ```
+
+It says this is nil. Meaning, the read method on .dat files for private keys is buggy.
+
+Let's see if we have private keys loaded properly for server ?
+
+```go
+(dlv)break engine.go:54
+Breakpoint 2 set at 0x7e53a1 for main.main() ./engine.go:54
+
+(dlv) p svList[1].Nd.keyDict
+map[int]_/home/username/truechain-consensus-core/pbft-core.keyItem nil
+
+(dlv) p svList[1].Nd.ecdsaKey
+*crypto/ecdsa.PrivateKey nil
+```
+
+So the private key wasn't loaded for server too. There's some issue with initializeKeys() method in node.go it seems (because that's responsible for reading private keys from the files..
+
+So the following step needs a marshalling from `x509.MarshalECPrivateKey(privateKey)` before we encode this into a `.dat` file.
+
+Per se, the following function needs an additional step for marshalling in node.go:
+```go
+func (nd *Node) initializeKeys() {
+	gob.Register(&ecdsa.PrivateKey{})
+
+	for i := 0; i < nd.N; i++ {
+		filename := fmt.Sprintf("sign%v.dat", i)
+		b, err := ioutil.ReadFile(path.Join(GetCWD(), "keys/", filename))
+		if err != nil {
+			MyPrint(3, "Error reading keys %s.\n", filename)
+			return
+		}
+		bufm := bytes.Buffer{}
+		bufm.Write(b)
+		d := gob.NewDecoder(&bufm)
+		sk := ecdsa.PrivateKey{}
+		d.Decode(&sk)
+		nd.sk = sk
+		nd.keyDict[i] = &sk.PublicKey
+		if i == nd.id {
+			nd.ecdsaKey = &sk
+		}
+	}
+	//nd.ecdsaKey, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)  // TODO: read from file
+```
+
+and so does the following for client.go (from `BuildClient()`):
+
+```go
+	cl.peers = peers
+	filename := fmt.Sprintf("sign%v.dat", cfg.N)
+	kfpath := path.Join(cfg.KD, filename)
+	MyPrint(2, kfpath + "\n")
+	b, err := ioutil.ReadFile(kfpath)
+	if err != nil {
+		MyPrint(3, "Error reading keys %s.\n", kfpath)
+		return nil
+	}
+	fmt.Println(b)
+	bufm := bytes.Buffer{}
+	bufm.Write(b)
+	gob.Register(&ecdsa.PrivateKey{})
+	d := gob.NewDecoder(&bufm)
+	sk := ecdsa.PrivateKey{}
+	d.Decode(&sk)
+	fmt.Println(d)
+	// MyPrint(2, sk)
+	cl.PrivKey = sk
+```
+
+So what we're looking for something like this: https://stackoverflow.com/a/41315404/1332401
