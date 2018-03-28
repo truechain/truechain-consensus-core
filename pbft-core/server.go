@@ -47,8 +47,7 @@ func BuildServer(cfg Config, IP string, Port int, me int) *Server {
 	go func(aC chan ApplyMsg) {
 		for {
 			c := <-aC
-			MyPrint(1, "New Log Item\n")
-			fmt.Println(c)
+			MyPrint(1, 	"[0.0.0.0:%d] New Log Item: %v\n", sv.Port, c)
 		}
 	}(applyChan)
 	sv.Nd = Make(cfg, me, Port, 0, applyChan, 100) // test 100 messages
