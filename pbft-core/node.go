@@ -438,6 +438,7 @@ func (nd *Node) ProxyProcessPrePrepare(arg ProxyProcessPrePrepareArg, reply *Pro
 }
 
 func (nd *Node) ProxyNewClientRequest(arg ProxyNewClientRequestArg, reply *ProxyNewClientRequestReply) error {
+	MyPrint(1, "New Client Request called.\n")
 	nd.newClientRequest(arg.Req, arg.ClientID) // we don't have return value here
 	return nil
 }
@@ -622,6 +623,7 @@ func (nd *Node) newClientRequest(req Request, clientId int) { // TODO: change to
 			return
 		}
 	}
+	MyPrint(2, "[%d] Received request from client: %v.\n", nd.id, req)
 	// TODO: do we need to verify client's request?
 	nd.mu.Lock()
 	if !nd.viewInUse {

@@ -25,6 +25,7 @@ import (
 	"strconv"
 
 	"./pbft-core"
+	"time"
 )
 
 const NUM_QUEST = 1000
@@ -48,7 +49,8 @@ func main() {
 	for i := 0; i < cfg.N; i++ {
 		svList[i].Nd.SetupReady <- true // make them to dial each other's RPCs
 	}
-
+	fmt.Println("\n !!! Please permit the program to accept incoming connections if you are using Mac OS.")
+	time.Sleep(5 * time.Second)  // wait for the servers to accept incoming connections
 	/////////////////
 	cl := pbft.BuildClient(cfg, cfg.IPList[cfg.N], cfg.Ports[cfg.N], 0)
 	for k := 0; k < NUM_QUEST; k++ {
