@@ -13,7 +13,7 @@ To be added.
 
 ### How to re-use
 
-Run the following:
+For a very basic sanity test, run the following:
 
 ```
 go build engine.go && ./engine
