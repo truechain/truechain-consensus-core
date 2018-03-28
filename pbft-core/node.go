@@ -39,7 +39,7 @@ import (
 	"github.com/alecthomas/repr"
 	//"golang.org/x/tools/go/gcimporter15/testdata"
 	//"log"
-	"io/ioutil"
+	//"io/ioutil"
 	"path"
 )
 
@@ -647,6 +647,7 @@ func (nd *Node) newClientRequest(req Request, clientId int) { // TODO: change to
 }
 
 func (nd *Node) initializeKeys() {
+	/*
 	gob.Register(&ecdsa.PrivateKey{})
 
 	for i := 0; i < nd.N; i++ {
@@ -666,8 +667,13 @@ func (nd *Node) initializeKeys() {
 			nd.ecdsaKey = &sk
 		}
 	}
-	//nd.ecdsaKey, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)  // TODO: read from file
-
+	//nd.ecdsaKey, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	*/
+	// read from config
+	for i:=0; i<nd.N; i++ {
+		nd.keyDict[i] = &nd.cfg.Keys[i].PublicKey
+	}
+	nd.ecdsaKey = nd.cfg.Keys[nd.id]
 }
 
 func (nd *Node) incPrepDict(dig DigType) {

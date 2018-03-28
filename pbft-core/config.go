@@ -21,12 +21,22 @@ import (
 	// "log"
 	// "os"
 	"path"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	//"fmt"
+	//"bytes"
+	//"encoding/gob"
+	//"io/ioutil"
+	//"log"
+	"crypto/rand"
 )
 
 // const PORT_NUMBER = 40623
 // const MAX_FAIL = 1
 const OUTPUT_THRESHOLD = 1
 const BASE_PORT = 40540
+
+const NUM_KEYS = 10
 
 type Config struct {
 	N          int
@@ -35,9 +45,18 @@ type Config struct {
 	IPList     []string
 	Ports      []int
 	HOSTS_FILE string
+	Keys 		[]*ecdsa.PrivateKey
 }
 
 func (cfg *Config) GenerateKeys() {
+	cfg.Keys = make([]*ecdsa.PrivateKey, NUM_KEYS)
+	for k := 0; k < NUM_KEYS; k++ {
+		sk, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		cfg.Keys[k] = sk
+	}
+}
+
+func (cfg *Config) GenerateKeysToFile() {
 	IdCount := 1000
 	cfg.KD = path.Join(GetCWD(), "keys/")
 	MakeDirIfNot(cfg.KD)

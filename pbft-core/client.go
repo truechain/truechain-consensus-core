@@ -22,12 +22,12 @@ import (
 	//"os"
 	"strconv"
 	//"fmt"
-	"bytes"
+	//"bytes"
 	"crypto/ecdsa"
-	"encoding/gob"
+	//"encoding/gob"
 	"fmt"
-	"io/ioutil"
-	"path"
+	//"io/ioutil"
+	//"path"
 )
 
 // import "fmt"
@@ -39,7 +39,7 @@ type Client struct {
 	Index   int
 	Me      int
 	Cfg     *Config
-	privKey ecdsa.PrivateKey
+	privKey *ecdsa.PrivateKey
 	peers   []*rpc.Client // directly contact Server.Nd
 }
 
@@ -54,7 +54,7 @@ func (cl *Client) NewRequest(msg string, timeStamp int64) {
 		//req := Request{RequestInner{cl.Cfg.N,0, 0, TYPE_REQU, MsgType(msg), timeStamp, nil}, "", msgSignature{nil, nil}}  // the N-th party is the client
 		req := Request{RequestInner{cl.Cfg.N, 0, 0, TYPE_REQU, MsgType(msg), timeStamp}, "", MsgSignature{nil, nil}} // the N-th party is the client
 		//req.inner.outer = &req
-		req.addSig(&cl.privKey)
+		req.addSig(cl.privKey)
 		arg := ProxyNewClientRequestArg{req, cl.Me}
 		reply := ProxyNewClientRequestReply{}
 		cl.peers[i].Go("Node.NewClientRequest", arg, &reply, nil)
@@ -76,6 +76,7 @@ func BuildClient(cfg Config, IP string, Port int, me int) *Client {
 		peers[i] = cl
 	}
 	cl.peers = peers
+	/*
 	filename := fmt.Sprintf("sign%v.dat", cfg.N)
 	kfpath := path.Join(cfg.KD, filename)
 	b, err := ioutil.ReadFile(kfpath)
@@ -89,7 +90,8 @@ func BuildClient(cfg Config, IP string, Port int, me int) *Client {
 	gob.Register(&ecdsa.PrivateKey{})
 	d := gob.NewDecoder(&bufm)
 	sk := ecdsa.PrivateKey{}
-	d.Decode(&sk)
+	d.Decode(&sk)*/
+	sk := cfg.Keys[cfg.N]
 	fmt.Println(sk)
 	cl.privKey = sk
 	// TODO: prepare ecdsa private key for the client
