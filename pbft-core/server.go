@@ -21,7 +21,7 @@ import (
 	"os"
 	"net/rpc"
 	"strconv"*/
-	"fmt"
+	//"fmt"
 )
 
 // import "fmt"
@@ -31,6 +31,7 @@ type Server struct {
 	Port int
 	Nd   *Node
 	Cfg  *Config
+	Out  chan ApplyMsg
 }
 
 func (sv *Server) Start() {
@@ -41,13 +42,14 @@ func BuildServer(cfg Config, IP string, Port int, me int) *Server {
 	sv := &Server{}
 	sv.IP = IP
 	sv.Port = Port
-
+	sv.Out = make(chan ApplyMsg)
 	sv.Cfg = &cfg
 	applyChan := make(chan ApplyMsg)
 	go func(aC chan ApplyMsg) {
 		for {
 			c := <-aC
-			MyPrint(1, 	"[0.0.0.0:%d] New Log Item: %v\n", sv.Port, c)
+			MyPrint(4, 	"[0.0.0.0:%d] [%d] New Sequence Item: %v\n", sv.Port, me, c)
+			sv.Out <- c
 		}
 	}(applyChan)
 	sv.Nd = Make(cfg, me, Port, 0, applyChan, 100) // test 100 messages

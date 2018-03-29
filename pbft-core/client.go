@@ -57,7 +57,7 @@ func (cl *Client) NewRequest(msg string, timeStamp int64) {
 		req.addSig(cl.privKey)
 		arg := ProxyNewClientRequestArg{req, cl.Me}
 		reply := ProxyNewClientRequestReply{}
-		cl.peers[i].Go("Node.NewClientRequest", arg, &reply, nil)
+		cl.peers[i].Go("Node.ProxyNewClientRequest", arg, &reply, nil) // try synchronize
 	}
 }
 

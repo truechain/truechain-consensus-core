@@ -33,7 +33,7 @@ import (
 
 // const PORT_NUMBER = 40623
 // const MAX_FAIL = 1
-const OUTPUT_THRESHOLD = 1
+const OUTPUT_THRESHOLD = 0
 const BASE_PORT = 40540
 
 const NUM_KEYS = 10
