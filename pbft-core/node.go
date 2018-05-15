@@ -18,43 +18,35 @@ package pbft
 
 import "time"
 import (
-	"crypto/ecdsa"
-	"fmt"
-	"sync"
-	//"crypto/elliptic"
-	"math/big"
-	"net/rpc"
-	//"github.com/alecthomas/gometalinter/_linters/github.com/client9/misspell"
-	//"github.com/rogpeppe/godef/go/ast"
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/gob"
 	"encoding/hex"
-	"net"
-	"os"
-	"strconv"
-	//"net/http"
-
+	"fmt"
 	"github.com/alecthomas/repr"
-	//"golang.org/x/tools/go/gcimporter15/testdata"
-	//"log"
-	// "io/ioutil"
+	"math/big"
+	"net"
+	"net/rpc"
+	"os"
 	"path"
+	"strconv"
+	"sync"
 )
 
-const SERVER_PORT = 40162
-const BUFFER_SIZE = 4096 * 32
+// const ServerPort = 40162
+// const BufferSize = 4096 * 32
 const (
-	TYPE_PRPR = iota
-	TYPE_PREP = iota
-	TYPE_COMM = iota
-	TYPE_INIT = iota
-	TYPE_REQU = iota
-	TYPE_VCHA = iota
-	TYPE_NEVW = iota
-	TYPE_CHKP = iota
+	typePrePrepare = iota
+	typePrepare    = iota
+	typeCommit     = iota
+	typeInit       = iota
+	typeRequest    = iota
+	typeViewChange = iota
+	typeNewView    = iota
+	typeCheckpoint = iota
 )
 
 // TODO: change all the int to int64 in case of overflow
@@ -231,7 +223,7 @@ type Log struct {
 type ActiveItem struct {
 	req      *Request
 	t        *time.Timer
-	clientId int
+	clientID int
 }
 
 type MsgType string
@@ -358,7 +350,7 @@ type ProxyProcessViewChangeReply struct {
 
 type ProxyProcessNewViewArg struct {
 	Req      Request
-	ClientId int
+	ClientID int
 }
 
 type ProxyProcessNewViewReply struct {
@@ -366,7 +358,7 @@ type ProxyProcessNewViewReply struct {
 
 type ProxyProcessCheckpointArg struct {
 	Req      Request
-	ClientId int
+	ClientID int
 }
 
 type ProxyProcessCheckpointReply struct {
@@ -376,7 +368,7 @@ func (nd *Node) broadcast(req Request) {
 	//MyPrint(1, "[%d] Broadcast %v\n", nd.id, req)
 	switch req.Inner.Reqtype {
 	// refine the following
-	case TYPE_PRPR:
+	case typePrePrepare:
 		arg := ProxyProcessPrePrepareArg{req, req.Inner.Id}
 		reply := make([]interface{}, nd.N)
 		for k := 0; k < nd.N; k++ {
@@ -384,7 +376,7 @@ func (nd *Node) broadcast(req Request) {
 		}
 		nd.broadcastByRPC("Node.ProxyProcessPrePrepare", arg, &reply)
 		break
-	case TYPE_REQU:
+	case typeRequest:
 		arg := ProxyNewClientRequestArg{req, req.Inner.Id}
 		reply := make([]interface{}, nd.N)
 		for k := 0; k < nd.N; k++ {
@@ -392,7 +384,7 @@ func (nd *Node) broadcast(req Request) {
 		}
 		nd.broadcastByRPC("Node.ProxyNewClientRequest", arg, &reply)
 		break
-	case TYPE_PREP:
+	case typePrepare:
 		arg := ProxyProcessPrepareArg{req, req.Inner.Id}
 		reply := make([]interface{}, nd.N)
 		for k := 0; k < nd.N; k++ {
@@ -400,7 +392,7 @@ func (nd *Node) broadcast(req Request) {
 		}
 		nd.broadcastByRPC("Node.ProxyProcessPrepare", arg, &reply)
 		break
-	case TYPE_COMM:
+	case typeCommit:
 		arg := ProxyProcessCommitArg{req}
 		reply := make([]interface{}, nd.N)
 		for k := 0; k < nd.N; k++ {
@@ -408,7 +400,7 @@ func (nd *Node) broadcast(req Request) {
 		}
 		nd.broadcastByRPC("Node.ProxyProcessCommit", arg, &reply)
 		break
-	case TYPE_VCHA:
+	case typeViewChange:
 		arg := ProxyProcessViewChangeArg{req, nd.id} // a dummy from
 		reply := make([]interface{}, nd.N)
 		for k := 0; k < nd.N; k++ {
@@ -416,7 +408,7 @@ func (nd *Node) broadcast(req Request) {
 		}
 		nd.broadcastByRPC("Node.ProxyProcessViewChange", arg, &reply)
 		break
-	case TYPE_NEVW:
+	case typeNewView:
 		arg := ProxyProcessNewViewArg{req, req.Inner.Id}
 		reply := make([]interface{}, nd.N)
 		for k := 0; k < nd.N; k++ {
@@ -424,7 +416,7 @@ func (nd *Node) broadcast(req Request) {
 		}
 		nd.broadcastByRPC("Node.ProxyProcessNewView", arg, &reply)
 		break
-	case TYPE_CHKP:
+	case typeCheckpoint:
 		arg := ProxyProcessCheckpointArg{req, req.Inner.Id}
 		reply := make([]interface{}, nd.N)
 		for k := 0; k < nd.N; k++ {
@@ -470,12 +462,12 @@ func (nd *Node) ProxyProcessViewChange(arg ProxyProcessViewChangeArg, reply *Pro
 
 func (nd *Node) ProxyProcessNewView(arg ProxyProcessNewViewArg, reply *ProxyProcessNewViewReply) error {
 	MyPrint(2, "[%d] ProxyProcessNewView %v\n", nd.id, arg)
-	nd.processNewView(arg.Req, arg.ClientId)
+	nd.processNewView(arg.Req, arg.ClientID)
 	return nil
 }
 
 func (nd *Node) ProxyProcessCheckpoint(arg ProxyProcessCheckpointArg, reply *ProxyProcessCheckpointReply) error {
-	nd.processCheckpoint(arg.Req, arg.ClientId)
+	nd.processCheckpoint(arg.Req, arg.ClientID)
 	return nil
 }
 
@@ -515,10 +507,10 @@ func (nd *Node) executeInOrder(req Request) {
 	for seq == nd.lastExecuted+1 {
 		waiting = false
 		nd.execute(ApplyMsg{seq, r})
-		nd.lastExecuted += 1
+		nd.lastExecuted++
 		rtemp, ok := nd.waiting[seq+1]
 		if ok {
-			seq += 1
+			seq++
 			r = rtemp
 			delete(nd.waiting, seq)
 		}
@@ -584,7 +576,7 @@ func (nd *Node) handleTimeout(dig DigType, view int) {
 			v.t.Stop()
 		}
 	}
-	nd.view += 1
+	nd.view++
 	nd.viewInUse = false
 	nd.mu.Unlock()
 
@@ -596,7 +588,7 @@ func (nd *Node) handleTimeout(dig DigType, view int) {
 	}
 	e.Encode(len(nd.prepared))
 	for k, _ := range nd.prepared {
-		r, _ := nd.nodeMessageLog.get(TYPE_PRPR, k, nd.primary) // old primary
+		r, _ := nd.nodeMessageLog.get(typePrePrepare, k, nd.primary) // old primary
 		e.Encode(r)
 		counter := 0
 		for i := 1; i < nd.N; i++ {
@@ -607,25 +599,25 @@ func (nd *Node) handleTimeout(dig DigType, view int) {
 				e.Encode(rtmp)
 				break
 			}
-			r, ok := nd.nodeMessageLog.get(TYPE_PREP, k, i)
+			r, ok := nd.nodeMessageLog.get(typePrepare, k, i)
 			if ok {
 				e.Encode(r)
-				counter += 1
+				counter++
 				// TODO: add counter whenever we found a PREP
 			}
 		}
 	}
 
-	viewChange := nd.createRequest(TYPE_VCHA, nd.lastStableCheckpoint, MsgType(b.Bytes()))
+	viewChange := nd.createRequest(typeViewChange, nd.lastStableCheckpoint, MsgType(b.Bytes()))
 	nd.broadcast(viewChange) // TODO: broadcast view change RPC path.
 	nd.processViewChange(viewChange, 0)
 }
 
-func (nd *Node) newClientRequest(req Request, clientId int) { // TODO: change to single arg and single reply
+func (nd *Node) newClientRequest(req Request, clientID int) { // TODO: change to single arg and single reply
 	if v, ok := nd.active[req.Dig]; ok {
 		if v.req == nil {
 			nd.mu.Lock()
-			nd.active[req.Dig] = ActiveItem{&req, v.t, v.clientId}
+			nd.active[req.Dig] = ActiveItem{&req, v.t, v.clientID}
 			nd.mu.Unlock()
 			if v2, ok2 := nd.commDict[req.Dig]; ok2 && v2.prepared {
 				msg := v2.req
@@ -647,13 +639,13 @@ func (nd *Node) newClientRequest(req Request, clientId int) { // TODO: change to
 		<-reqTimer.C
 		nd.handleTimeout(req.Dig, req.Inner.View)
 	}(reqTimer, req)
-	nd.active[req.Dig] = ActiveItem{&req, reqTimer, clientId}
+	nd.active[req.Dig] = ActiveItem{&req, reqTimer, clientID}
 	nd.mu.Unlock()
 
 	if nd.primary == nd.id {
 		MyPrint(2, "[%d] Leader acked: %v.\n", nd.id, req)
 		nd.seq = nd.seq + 1
-		m := nd.createRequest(TYPE_PRPR, nd.seq, MsgType(req.Dig))
+		m := nd.createRequest(typePrePrepare, nd.seq, MsgType(req.Dig))
 		nd.nodeMessageLog.set(m.Inner.Reqtype, m.Inner.Seq, m.Inner.Id, m)
 		// write log
 		nd.broadcast(m) // TODO: broadcast pre-prepare RPC path.
@@ -682,7 +674,7 @@ func (nd *Node) initializeKeys() {
 
 func (nd *Node) incPrepDict(dig DigType) {
 	if val, ok := nd.prepDict[dig]; ok {
-		val.number += 1
+		val.number++
 		nd.prepDict[dig] = val
 	} else {
 		nd.prepDict[dig] = reqCounter{1, false, nil}
@@ -691,7 +683,7 @@ func (nd *Node) incPrepDict(dig DigType) {
 
 func (nd *Node) incCommDict(dig DigType) {
 	if val, ok := nd.commDict[dig]; ok {
-		val.number += 1
+		val.number++
 		nd.commDict[dig] = val
 	} else {
 		nd.commDict[dig] = reqCounter{1, false, nil}
@@ -705,7 +697,7 @@ func (nd *Node) checkPrepareMargin(dig DigType, seq int) bool {
 		if !val.prepared {
 			fmt.Printf("prepare margin check number %d\n", val.number)
 			if val.number >= 2*nd.f+1 {
-				val, ok := nd.nodeMessageLog.get(TYPE_PRPR, seq, nd.primary)
+				val, ok := nd.nodeMessageLog.get(typePrePrepare, seq, nd.primary)
 				MyPrint(2, "Dig: %v, val.Dig: %v\n", dig, DigType(val.Inner.Msg))
 				if ok && DigType(val.Inner.Msg) == dig { // TODO: check the diff!
 					if valt, okt := nd.prepDict[dig]; okt {
@@ -728,7 +720,7 @@ func (nd *Node) checkCommittedMargin(dig DigType, req Request) bool {
 		if !val.prepared {
 			//fmt.Printf("commit margin check number %d\n", val.number)
 			if val.number >= 2*nd.f+1 {
-				val, ok := nd.nodeMessageLog.get(TYPE_PRPR, seq, nd.primary)
+				val, ok := nd.nodeMessageLog.get(typePrePrepare, seq, nd.primary)
 				if ok && DigType(val.Inner.Msg) == dig { // TODO: check the diff!
 					if valt, okt := nd.commDict[dig]; okt {
 						valt.prepared = true
@@ -743,10 +735,10 @@ func (nd *Node) checkCommittedMargin(dig DigType, req Request) bool {
 	return false
 }
 
-func (nd *Node) processPrePrepare(req Request, clientId int) {
+func (nd *Node) processPrePrepare(req Request, clientID int) {
 
 	seq := req.Inner.Seq
-	if val1, ok1 := nd.nodeMessageLog.content[TYPE_PRPR]; ok1 {
+	if val1, ok1 := nd.nodeMessageLog.content[typePrePrepare]; ok1 {
 		if _, ok2 := val1[seq]; ok2 {
 			return
 		}
@@ -760,12 +752,12 @@ func (nd *Node) processPrePrepare(req Request, clientId int) {
 			nd.handleTimeout(DigType(req.Inner.Msg), req.Inner.View)
 		}(reqTimer, req)
 		nd.mu.Lock()
-		nd.active[DigType(req.Inner.Msg)] = ActiveItem{&req, reqTimer, clientId}
+		nd.active[DigType(req.Inner.Msg)] = ActiveItem{&req, reqTimer, clientID}
 		nd.mu.Unlock()
 	}
 
 	nd.nodeMessageLog.set(req.Inner.Reqtype, req.Inner.Seq, req.Inner.Id, req)
-	m := nd.createRequest(TYPE_PREP, req.Inner.Seq, MsgType(req.Inner.Msg)) // TODO: check content!
+	m := nd.createRequest(typePrepare, req.Inner.Seq, MsgType(req.Inner.Msg)) // TODO: check content!
 	nd.nodeMessageLog.set(m.Inner.Reqtype, m.Inner.Seq, m.Inner.Id, m)
 	nd.recordPBFT(m)
 	nd.mu.Lock()
@@ -774,7 +766,7 @@ func (nd *Node) processPrePrepare(req Request, clientId int) {
 	nd.broadcast(m)
 	if nd.checkPrepareMargin(DigType(req.Inner.Msg), req.Inner.Seq) { // TODO: check dig vs Inner.Msg
 		nd.record("PREPARED sequence number " + strconv.Itoa(req.Inner.Seq) + "\n")
-		m := nd.createRequest(TYPE_COMM, req.Inner.Seq, req.Inner.Msg) // TODO: check content
+		m := nd.createRequest(typeCommit, req.Inner.Seq, req.Inner.Msg) // TODO: check content
 		nd.broadcast(m)
 		nd.nodeMessageLog.set(m.Inner.Reqtype, m.Inner.Seq, m.Inner.Id, m)
 		nd.incCommDict(DigType(req.Inner.Msg)) //TODO: check content
@@ -816,7 +808,7 @@ func (nd *Node) addNodeHistory(req Request) {
 	nd.nodeMessageLog.set(req.Inner.Reqtype, req.Inner.Seq, req.Inner.Id, req)
 }
 
-func (nd *Node) processPrepare(req Request, clientId int) {
+func (nd *Node) processPrepare(req Request, clientID int) {
 	nd.addNodeHistory(req)
 	nd.mu.Lock()
 	nd.incPrepDict(DigType(req.Inner.Msg))
@@ -824,7 +816,7 @@ func (nd *Node) processPrepare(req Request, clientId int) {
 	if nd.checkPrepareMargin(DigType(req.Inner.Msg), req.Inner.Seq) { // TODO: check dig vs Inner.Msg
 		MyPrint(2, "[%d] Checked Margin\n", nd.id)
 		nd.record("PREPARED sequence number " + strconv.Itoa(req.Inner.Seq) + "\n")
-		m := nd.createRequest(TYPE_COMM, req.Inner.Seq, req.Inner.Msg) // TODO: check content
+		m := nd.createRequest(typeCommit, req.Inner.Seq, req.Inner.Msg) // TODO: check content
 		nd.broadcast(m)
 		nd.nodeMessageLog.set(m.Inner.Reqtype, m.Inner.Seq, m.Inner.Id, m)
 		nd.mu.Lock()
@@ -911,7 +903,7 @@ func (nd *Node) viewProcessPrepare(vPrepDict viewDict, vPreDict map[int]Request,
 			if _, ok3 := counter[v2.Inner.Seq]; !ok3 {
 				counter[v2.Inner.Seq] = 1
 			} else {
-				counter[v2.Inner.Seq] += 1
+				counter[v2.Inner.Seq]++
 			}
 		}
 	}
@@ -969,13 +961,13 @@ func (nd *Node) processViewChange(req Request, from int) {
 			dec.Decode(&rt)
 			if rt.Inner.Id >= 0 { // so that this is not a dummy req
 				switch rt.Inner.Reqtype {
-				case TYPE_PREP:
+				case typePrepare:
 					if _, ok := vprepDict[rt.Inner.Seq]; !ok {
 						vprepDict[rt.Inner.Seq] = make(map[int]Request)
 					}
 					vprepDict[rt.Inner.Seq][rt.Inner.Id] = rt
 					break
-				case TYPE_PRPR:
+				case typePrePrepare:
 					vpreDict[rt.Inner.Seq] = rt
 				}
 
@@ -1017,13 +1009,13 @@ func (nd *Node) processViewChange(req Request, from int) {
 			if j == 0 {
 				continue
 			}
-			r, _ := nd.nodeMessageLog.get(TYPE_PRPR, j, nd.primary)
-			tmp := nd.createRequest(TYPE_PRPR, j, r.Inner.Msg)
+			r, _ := nd.nodeMessageLog.get(typePrePrepare, j, nd.primary)
+			tmp := nd.createRequest(typePrePrepare, j, r.Inner.Msg)
 			reqList = append(reqList, tmp)
 			//e.Encode(tmp)
 		}
 		e.Encode(reqList)
-		out := nd.createRequest(TYPE_NEVW, 0, MsgType(buf.Bytes()))
+		out := nd.createRequest(typeNewView, 0, MsgType(buf.Bytes()))
 		nd.viewInUse = true
 		nd.primary = nd.view % nd.N
 		nd.active = make(map[DigType]ActiveItem)
@@ -1038,7 +1030,7 @@ func (nd *Node) processViewChange(req Request, from int) {
 func (nd *Node) newViewProcessPrePrepare(prprList []Request) bool {
 	for _, r := range prprList {
 		if nd.verifyMsg(r) && r.verifyDig() {
-			out := nd.createRequest(TYPE_PREP, r.Inner.Seq, r.Inner.Msg)
+			out := nd.createRequest(typePrepare, r.Inner.Seq, r.Inner.Msg)
 			nd.broadcast(out)
 		} else {
 			return false
@@ -1047,6 +1039,8 @@ func (nd *Node) newViewProcessPrePrepare(prprList []Request) bool {
 	return true
 }
 
+// newViewProcessView returns whether the vchangeList is genuine
+// based on checks off of digest and message verifications
 func (nd *Node) newViewProcessView(vchangeList []Request) bool {
 	for _, r := range vchangeList {
 		if !(nd.verifyMsg(r) && r.verifyDig()) {
@@ -1056,6 +1050,9 @@ func (nd *Node) newViewProcessView(vchangeList []Request) bool {
 	return true
 }
 
+// processNewView receives the request and client ID in order to
+// handle consisteny across view change requests and triggers
+// new PrePrepare phases accordingly
 func (nd *Node) processNewView(req Request, clientID int) {
 	m := req.Inner.Msg
 	bufcurrent := bytes.Buffer{}
@@ -1069,10 +1066,10 @@ func (nd *Node) processNewView(req Request, clientID int) {
 	for _, r := range reqList {
 		if r.verifyDig() && nd.verifyMsg(r) {
 			switch r.Inner.Reqtype {
-			case TYPE_VCHA:
+			case typeViewChange:
 				vchangeList = append(vchangeList, r)
 				break
-			case TYPE_PRPR:
+			case typePrePrepare:
 				prprList = append(prprList, r)
 				break
 			}
@@ -1095,19 +1092,23 @@ func (nd *Node) processNewView(req Request, clientID int) {
 	}
 }
 
+// isInNodeLog ??
 func (nd *Node) isInNodeLog() bool {
 	// deprecated
 	return false
 }
 
+// processRequest ??
 func (nd *Node) processRequest() {
 	// we use RPC so we don't need a central msg receiver
 }
 
+// beforeShutdown closes output log file buffer
 func (nd *Node) beforeShutdown() {
 	nd.outputLog.Close()
 }
 
+// setupConnections dials RPC connections to nodes from the client
 func (nd *Node) setupConnections() {
 	<-nd.SetupReady
 	MyPrint(1, "[%d] Begin to setup RPC connections.\n", nd.id)
@@ -1147,7 +1148,6 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, max_req
 	rpc.Register(nd)
 	nd.cfg = cfg
 	nd.N = cfg.N
-	//nd.peers = peers
 	nd.f = (nd.N - 1) / 3
 	MyPrint(2, "Going to tolerate %d adversaries\n", nd.f)
 	nd.lowBound = 0

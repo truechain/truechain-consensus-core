@@ -17,21 +17,12 @@ limitations under the License.
 package pbft
 
 import (
-	"net/rpc"
-	//"path"
-	//"os"
-	"strconv"
-	//"fmt"
-	//"bytes"
 	"crypto/ecdsa"
-	//"encoding/gob"
 	"fmt"
-	//"io/ioutil"
+	"net/rpc"
 	"path"
+	"strconv"
 )
-
-// import "fmt"
-// import "net"
 
 type Client struct {
 	IP      string
@@ -51,8 +42,8 @@ func (cl *Client) Start() {
 func (cl *Client) NewRequest(msg string, timeStamp int64) {
 	//broadcast the request
 	for i := 0; i < cl.Cfg.N; i++ {
-		//req := Request{RequestInner{cl.Cfg.N,0, 0, TYPE_REQU, MsgType(msg), timeStamp, nil}, "", msgSignature{nil, nil}}  // the N-th party is the client
-		req := Request{RequestInner{cl.Cfg.N, 0, 0, TYPE_REQU, MsgType(msg), timeStamp}, "", MsgSignature{nil, nil}} // the N-th party is the client
+		//req := Request{RequestInner{cl.Cfg.N,0, 0, typeRequest, MsgType(msg), timeStamp, nil}, "", msgSignature{nil, nil}}  // the N-th party is the client
+		req := Request{RequestInner{cl.Cfg.N, 0, 0, typeRequest, MsgType(msg), timeStamp}, "", MsgSignature{nil, nil}} // the N-th party is the client
 		//req.inner.outer = &req
 		req.addSig(cl.privKey)
 		arg := ProxyNewClientRequestArg{req, cl.Me}
@@ -78,7 +69,6 @@ func BuildClient(cfg Config, IP string, Port int, me int) *Client {
 	cl.peers = peers
 	pemkeyFile := fmt.Sprintf("sign%v.pem", cfg.N)
 	sk := FetchPrivateKey(path.Join(cfg.KD, pemkeyFile))
-	// sk := cfg.Keys[cfg.N]
 	fmt.Println("just fetched private key for Client")
 	fmt.Println(sk)
 	cl.privKey = sk

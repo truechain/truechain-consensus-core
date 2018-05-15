@@ -31,7 +31,7 @@ pbft-core/node.go:653:43: cannot use nil as type Request in field value
 - [ ] Add checkpoint support
 - [ ] add counter whenever we found a PREP
 - [ ] nd.broadcast(viewChange) // TODO  broadcast view change RPC path.
-- [ ] func (nd *Node) NewClientRequest(req Request, clientId int) {  // TODO  change to single arg and single reply
+- [ ] func (nd *Node) NewClientRequest(req Request, clientID int) {  // TODO  change to single arg and single reply
 - [ ] nd.broadcast(m)  // TODO  broadcast pre-prepare RPC path.
 - [ ] initialize ECDSA keys and hello signature
 - [ ] if ok && val.dig == dig {   // TODO  check the diff!

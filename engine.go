@@ -17,30 +17,24 @@ limitations under the License.
 package main
 
 import (
-	//"fmt"
+	"./pbft-core"
+	"fmt"
 	"os"
 	"path"
-	//"log"
-	"fmt"
 	"strconv"
-
-	"./pbft-core"
 	"time"
 )
-
-// NumQuest is the number of requests sent from client
-const NumQuest = 100
 
 func main() {
 
 	cfg := pbft.Config{}
-	cfg.HOSTS_FILE = path.Join(os.Getenv("HOME"), "hosts")
-	cfg.IPList, cfg.Ports = pbft.GetIPConfigs(cfg.HOSTS_FILE)
+	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts")
+	cfg.IPList, cfg.Ports = pbft.GetIPConfigs(cfg.HostsFile)
 	fmt.Printf("Get IPList %v, Ports %v\n", cfg.IPList, cfg.Ports)
-	cfg.N = len(cfg.IPList) - 1 // we assume the number of client is 1
-	// cfg.GenerateKeys()
-	cfg.GenerateKeysToFile()
-	/////////////////
+	cfg.NumKeys = len(cfg.IPList)
+	cfg.N = cfg.NumKeys - 1 // we assume client count to be 1
+	cfg.NumQuest = 100
+	cfg.GenerateKeysToFile(cfg.NumKeys)
 
 	svList := make([]*pbft.Server, cfg.N)
 	for i := 0; i < cfg.N; i++ {
@@ -56,10 +50,10 @@ func main() {
 	}
 	fmt.Println("[!!!] Please allow the program to accept incoming connections if you are using Mac OS.")
 	time.Sleep(1 * time.Second) // wait for the servers to accept incoming connections
-	/////////////////
+
 	cl := pbft.BuildClient(cfg, cfg.IPList[cfg.N], cfg.Ports[cfg.N], 0)
 	start := time.Now()
-	for k := 0; k < NumQuest; k++ {
+	for k := 0; k < cfg.NumQuest; k++ {
 		cl.NewRequest("Request "+strconv.Itoa(k), int64(k))
 	}
 	fmt.Println("Finish sending the requests.")
@@ -68,7 +62,7 @@ func main() {
 		go func(ind int) {
 			for {
 				c := <-svList[ind].Out
-				if c.Index == NumQuest {
+				if c.Index == cfg.NumQuest {
 					finish <- true
 				}
 			}

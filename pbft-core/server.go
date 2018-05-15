@@ -16,15 +16,13 @@ limitations under the License.
 
 package pbft
 
-import (
-/*"path"
-"os"
-"net/rpc"
-"strconv"*/
-//"fmt"
-)
-
-// import "fmt"
+// import (
+// "path"
+// "os"
+// "net/rpc"
+// "strconv"
+// "fmt"
+// )
 
 type Server struct {
 	IP   string

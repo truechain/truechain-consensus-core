@@ -140,8 +140,8 @@ Type `next` or `n`:
 Warning: debugging optimized function
     52:		//broadcast the request
     53:		for i := 0; i < cl.Cfg.N; i++ {
-    54:			//req := Request{RequestInner{cl.Cfg.N,0, 0, TYPE_REQU, MsgType(msg), timeStamp, nil}, "", msgSignature{nil, nil}}  // the N-th party is the client
-    55:			req := Request{RequestInner{cl.Cfg.N, 0, 0, TYPE_REQU, MsgType(msg), timeStamp}, "", MsgSignature{nil, nil}} // the N-th party is the client
+    54:			//req := Request{RequestInner{cl.Cfg.N,0, 0, typeRequest, MsgType(msg), timeStamp, nil}, "", msgSignature{nil, nil}}  // the N-th party is the client
+    55:			req := Request{RequestInner{cl.Cfg.N, 0, 0, typeRequest, MsgType(msg), timeStamp}, "", MsgSignature{nil, nil}} // the N-th party is the client
     56:			//req.inner.outer = &req
 =>  57:			req.addSig(&cl.privKey)
     58:			arg := ProxyNewClientRequestArg{req, cl.Me}
@@ -182,7 +182,7 @@ hmmm, what's cl anyway?
 			"127.0.0.1",
 		],
 		Ports: []int len: 4, cap: 4, [40540,40541,40542,40543],
-		HOSTS_FILE: "/home/username/hosts",},
+		HostsFile: "/home/username/hosts",},
 	privKey: crypto/ecdsa.PrivateKey {
 		PublicKey: (*crypto/ecdsa.PublicKey)(0xc4201fa030),
 		D: *math/big.Int nil,},

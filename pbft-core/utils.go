@@ -41,7 +41,7 @@ func MyPrint(t int, format string, args ...interface{}) {
 	yellow := color.New(color.FgYellow).SprintFunc()
 	red := color.New(color.FgRed).SprintFunc()
 
-	if t >= OUTPUT_THRESHOLD {
+	if t >= OutputThreshold {
 
 		switch t {
 		case 0: // info
@@ -110,7 +110,7 @@ func GetIPConfigs(s string) ([]string, []int) {
 	ports := make([]int, 0)
 	for k, v := range lst {
 		MyPrint(0, string(k), v)
-		ports = append(ports, BASE_PORT+k)
+		ports = append(ports, BasePort+k)
 	}
 	return lst, ports
 }

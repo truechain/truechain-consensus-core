@@ -17,54 +17,32 @@ limitations under the License.
 package pbft
 
 import (
-	// "fmt"
-	// "log"
-	// "os"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"path"
-	//"fmt"
-	//"bytes"
-	//"encoding/gob"
-	//"io/ioutil"
-	//"log"
-	"crypto/rand"
 )
 
-// const PORT_NUMBER = 40623
-// const MAX_FAIL = 1
-const OUTPUT_THRESHOLD = 0
-const BASE_PORT = 40540
+// MaxFail defines the number of faults to be tolerated
+const MaxFail = 1
+const OutputThreshold = 0
 
-const NUM_KEYS = 10
+// BasePort is used as base value of ports defined for initializng PBFT servers
+const BasePort = 40540
 
 type Config struct {
-	N          int
-	KD         string
-	LD         string
-	IPList     []string
-	Ports      []int
-	HOSTS_FILE string
-	Keys       []*ecdsa.PrivateKey
+	N         int      // number of nodes to be launchedt
+	KD        string   // key directory where pub/priva ECDSA keys are stored
+	LD        string   // log directory
+	IPList    []string // stores list of IP addresses belonging to BFT nodes
+	Ports     []int    // stores list of Ports belonging to BFT nodes
+	HostsFile string   // network config file, to read IP addresses from
+	NumQuest  int      // NumQuest is the number of requests sent from client
+	NumKeys   int      // NumKeys is the count of IP addresses (BFT nodes) participating
 }
 
-// type DecodeParams struct {
-//   pemEncoded, pemEncodedPub []byte
-// 	ktype string // ktype is whether public/private/both(nil)
-// }
-
-func (cfg *Config) GenerateKeys() {
-	cfg.Keys = make([]*ecdsa.PrivateKey, NUM_KEYS)
-	for k := 0; k < NUM_KEYS; k++ {
-		sk, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-		cfg.Keys[k] = sk
-	}
-}
-
-func (cfg *Config) GenerateKeysToFile() {
-	IdCount := 1000
+// GenerateKeysToFile generates ECDSA public-private keypairs to a folder
+func (cfg *Config) GenerateKeysToFile(numKeys int) {
+	// IdCount := 1000
 	cfg.KD = path.Join(GetCWD(), "keys/")
 	MakeDirIfNot(cfg.KD)
-	WriteNewKeys(IdCount, cfg.KD)
-	MyPrint(1, "Generated %d keys in %s folder..\n", IdCount, cfg.KD)
+	WriteNewKeys(numKeys, cfg.KD)
+	MyPrint(1, "Generated %d keypairs in %s folder..\n", numKeys, cfg.KD)
 }
