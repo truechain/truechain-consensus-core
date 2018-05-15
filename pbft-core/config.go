@@ -20,9 +20,9 @@ import (
 	// "fmt"
 	// "log"
 	// "os"
-	"path"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"path"
 	//"fmt"
 	//"bytes"
 	//"encoding/gob"
@@ -40,13 +40,18 @@ const NUM_KEYS = 10
 
 type Config struct {
 	N          int
-	KD				 string
-	LD				 string
+	KD         string
+	LD         string
 	IPList     []string
 	Ports      []int
 	HOSTS_FILE string
-	Keys 		[]*ecdsa.PrivateKey
+	Keys       []*ecdsa.PrivateKey
 }
+
+// type DecodeParams struct {
+//   pemEncoded, pemEncodedPub []byte
+// 	ktype string // ktype is whether public/private/both(nil)
+// }
 
 func (cfg *Config) GenerateKeys() {
 	cfg.Keys = make([]*ecdsa.PrivateKey, NUM_KEYS)

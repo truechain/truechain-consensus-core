@@ -17,11 +17,13 @@ limitations under the License.
 package pbft
 
 import (
-	"bytes"
+	// "bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"encoding/gob"
+	// "encoding/pem"
+	// "crypto/x509"
+	// "encoding/gob"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -38,19 +40,25 @@ func GetCWD() string {
 	return dir
 }
 
-func WriteNewKeys(kcount int, kdir string) {
-	gob.Register(&ecdsa.PrivateKey{})
+// func encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) ([]byte, []byte) {
+// 		x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
+// 		pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+// 		x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
+// 		pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
+//     return []byte(pemEncoded), []byte(pemEncodedPub)
+// }
 
+func WriteNewKeys(kcount int, kdir string) {
 	for k := 0; k < kcount; k++ {
-		sk, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-		filename := fmt.Sprintf("sign%v.dat", k)
-		// FIXME: gob (??)
-		buf := bytes.Buffer{}
-		e := gob.NewEncoder(&buf)
-		e.Encode(sk)
-		err := ioutil.WriteFile(path.Join(kdir, filename), buf.Bytes(), 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
+		privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		publicKey := &privateKey.PublicKey
+		pemEncoded, pemEncodedPub := EncodeECDSAKeys(privateKey, publicKey)
+
+		pemkey_filename := fmt.Sprintf("sign%v.pem", k)
+		err1 := ioutil.WriteFile(path.Join(kdir, pemkey_filename), pemEncoded, 0644)
+		CheckErr(err1)
+		pubkey_filename := fmt.Sprintf("sign%v.pub", k)
+		err2 := ioutil.WriteFile(path.Join(kdir, pubkey_filename), pemEncodedPub, 0644)
+		CheckErr(err2)
 	}
 }

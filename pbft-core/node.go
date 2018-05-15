@@ -40,7 +40,7 @@ import (
 	"github.com/alecthomas/repr"
 	//"golang.org/x/tools/go/gcimporter15/testdata"
 	//"log"
-	//"io/ioutil"
+	// "io/ioutil"
 	"path"
 )
 
@@ -111,7 +111,7 @@ type viewDictKey struct {
 type DigType string
 
 type nodeMsgLog struct {
-	mu sync.Mutex
+	mu      sync.Mutex
 	content map[int](map[int](map[int]Request))
 }
 
@@ -483,7 +483,7 @@ func (nd *Node) ProxyProcessCheckpoint(arg ProxyProcessCheckpointArg, reply *Pro
 func (nd *Node) broadcastByRPC(rpcPath string, arg interface{}, reply *[]interface{}) {
 	MyPrint(2, "[%d] Broadcasting to %s, %v\n", nd.id, rpcPath, arg)
 	divCallList := make([]*rpc.Call, 0)
-	for ind := 0; ind < nd.N; ind ++ {
+	for ind := 0; ind < nd.N; ind++ {
 		if ind == nd.id {
 			continue // skip the node itself
 		}
@@ -492,7 +492,7 @@ func (nd *Node) broadcastByRPC(rpcPath string, arg interface{}, reply *[]interfa
 	}
 	// synchronize
 	for _, divCall := range divCallList {
-		divCallDone := <- divCall.Done
+		divCallDone := <-divCall.Done
 		if divCallDone.Error != nil {
 			MyPrint(3, "%s", "error happened in broadcasting "+rpcPath+"\n")
 		}
@@ -512,7 +512,7 @@ func (nd *Node) executeInOrder(req Request) {
 	if ac.req == nil {
 		return
 	}
-	for seq == nd.lastExecuted + 1 {
+	for seq == nd.lastExecuted+1 {
 		waiting = false
 		nd.execute(ApplyMsg{seq, r})
 		nd.lastExecuted += 1
@@ -661,33 +661,23 @@ func (nd *Node) newClientRequest(req Request, clientId int) { // TODO: change to
 }
 
 func (nd *Node) initializeKeys() {
-	/*
 	gob.Register(&ecdsa.PrivateKey{})
-
+	// fmt.Println("============")
+	// MyPrint(2, string(nd.N))
+	// MyPrint(2, string(nd.cfg.N)
+	// fmt.Println("============")
 	for i := 0; i < nd.N; i++ {
-		filename := fmt.Sprintf("sign%v.dat", i)
-		b, err := ioutil.ReadFile(path.Join(GetCWD(), "keys/", filename))
-		if err != nil {
-			MyPrint(3, "Error reading keys %s.\n", filename)
-			return
-		}
-		bufm := bytes.Buffer{}
-		bufm.Write(b)
-		d := gob.NewDecoder(&bufm)
-		sk := ecdsa.PrivateKey{}
-		d.Decode(&sk)
-		nd.keyDict[i] = &sk.PublicKey
+		pubkeyFile := fmt.Sprintf("sign%v.pub", i)
+		fmt.Println("fetching file: ", pubkeyFile)
+		pubKey := FetchPublicKey(path.Join(nd.cfg.KD, pubkeyFile))
+		nd.keyDict[i] = pubKey
 		if i == nd.id {
-			nd.ecdsaKey = &sk
+			pemkeyFile := fmt.Sprintf("sign%v.pem", i)
+			pemKey := FetchPrivateKey(path.Join(nd.cfg.KD, pemkeyFile))
+			nd.ecdsaKey = pemKey
+			MyPrint(1, "Fetched private key")
 		}
 	}
-	//nd.ecdsaKey, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	*/
-	// read from config
-	for i:=0; i<nd.N; i++ {
-		nd.keyDict[i] = &nd.cfg.Keys[i].PublicKey
-	}
-	nd.ecdsaKey = nd.cfg.Keys[nd.id]
 }
 
 func (nd *Node) incPrepDict(dig DigType) {
@@ -697,7 +687,6 @@ func (nd *Node) incPrepDict(dig DigType) {
 	} else {
 		nd.prepDict[dig] = reqCounter{1, false, nil}
 	}
-
 }
 
 func (nd *Node) incCommDict(dig DigType) {
@@ -727,11 +716,8 @@ func (nd *Node) checkPrepareMargin(dig DigType, seq int) bool {
 				}
 			}
 		}
-		return false
-	} else {
-		return false
 	}
-
+	return false
 }
 
 func (nd *Node) checkCommittedMargin(dig DigType, req Request) bool {
@@ -753,11 +739,8 @@ func (nd *Node) checkCommittedMargin(dig DigType, req Request) bool {
 				}
 			}
 		}
-		return false
-	} else {
-		return false
 	}
-
+	return false
 }
 
 func (nd *Node) processPrePrepare(req Request, clientId int) {
@@ -1126,7 +1109,7 @@ func (nd *Node) beforeShutdown() {
 }
 
 func (nd *Node) setupConnections() {
-	<- nd.SetupReady
+	<-nd.SetupReady
 	MyPrint(1, "[%d] Begin to setup RPC connections.\n", nd.id)
 	peers := make([]*rpc.Client, nd.cfg.N)
 	for i := 0; i < nd.cfg.N; i++ {
@@ -1202,13 +1185,13 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, max_req
 	// kfpath := path.Join(cfg.KD, filename)
 
 	MakeDirIfNot(nd.cfg.LD) //handles 'already exists'
-	fi, err := os.Create(path.Join(nd.cfg.LD, "PBFTLog" + strconv.Itoa(nd.id) + ".txt"))
+	fi, err := os.Create(path.Join(nd.cfg.LD, "PBFTLog"+strconv.Itoa(nd.id)+".txt"))
 	if err == nil {
 		nd.outputLog = fi
 	} else {
 		panic(err)
 	}
-	fi2, err2 := os.Create(path.Join(nd.cfg.LD, "PBFTBuffer" + strconv.Itoa(nd.id) + ".txt"))
+	fi2, err2 := os.Create(path.Join(nd.cfg.LD, "PBFTBuffer"+strconv.Itoa(nd.id)+".txt"))
 	if err2 == nil {
 		nd.commitLog = fi2
 	} else {

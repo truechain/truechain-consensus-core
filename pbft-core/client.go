@@ -27,7 +27,7 @@ import (
 	//"encoding/gob"
 	"fmt"
 	//"io/ioutil"
-	//"path"
+	"path"
 )
 
 // import "fmt"
@@ -76,22 +76,10 @@ func BuildClient(cfg Config, IP string, Port int, me int) *Client {
 		peers[i] = cl
 	}
 	cl.peers = peers
-	/*
-	filename := fmt.Sprintf("sign%v.dat", cfg.N)
-	kfpath := path.Join(cfg.KD, filename)
-	b, err := ioutil.ReadFile(kfpath)
-	if err != nil {
-		MyPrint(3, "Error reading keys %s.\n", kfpath)
-		return nil
-	}
-	fmt.Println(b)
-	bufm := bytes.Buffer{}
-	bufm.Write(b)
-	gob.Register(&ecdsa.PrivateKey{})
-	d := gob.NewDecoder(&bufm)
-	sk := ecdsa.PrivateKey{}
-	d.Decode(&sk)*/
-	sk := cfg.Keys[cfg.N]
+	pemkeyFile := fmt.Sprintf("sign%v.pem", cfg.N)
+	sk := FetchPrivateKey(path.Join(cfg.KD, pemkeyFile))
+	// sk := cfg.Keys[cfg.N]
+	fmt.Println("just fetched private key for Client")
 	fmt.Println(sk)
 	cl.privKey = sk
 	// TODO: prepare ecdsa private key for the client

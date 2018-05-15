@@ -17,11 +17,11 @@ limitations under the License.
 package pbft
 
 import (
-	/*"path"
-	"os"
-	"net/rpc"
-	"strconv"*/
-	//"fmt"
+/*"path"
+"os"
+"net/rpc"
+"strconv"*/
+//"fmt"
 )
 
 // import "fmt"
@@ -48,7 +48,7 @@ func BuildServer(cfg Config, IP string, Port int, me int) *Server {
 	go func(aC chan ApplyMsg) {
 		for {
 			c := <-aC
-			MyPrint(4, 	"[0.0.0.0:%d] [%d] New Sequence Item: %v\n", sv.Port, me, c)
+			MyPrint(4, "[0.0.0.0:%d] [%d] New Sequence Item: %v\n", sv.Port, me, c)
 			sv.Out <- c
 		}
 	}(applyChan)

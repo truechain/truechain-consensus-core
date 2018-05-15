@@ -28,7 +28,8 @@ import (
 	"time"
 )
 
-const NUM_QUEST = 100
+// NumQuest is the number of requests sent from client
+const NumQuest = 100
 
 func main() {
 
@@ -37,42 +38,44 @@ func main() {
 	cfg.IPList, cfg.Ports = pbft.GetIPConfigs(cfg.HOSTS_FILE)
 	fmt.Printf("Get IPList %v, Ports %v\n", cfg.IPList, cfg.Ports)
 	cfg.N = len(cfg.IPList) - 1 // we assume the number of client is 1
-	cfg.GenerateKeys()
+	// cfg.GenerateKeys()
+	cfg.GenerateKeysToFile()
 	/////////////////
 
 	svList := make([]*pbft.Server, cfg.N)
 	for i := 0; i < cfg.N; i++ {
+		fmt.Println(cfg.IPList[i], cfg.Ports[i], i)
 		svList[i] = pbft.BuildServer(cfg, cfg.IPList[i], cfg.Ports[i], i)
 	}
 	for i := 0; i < cfg.N; i++ {
 		<-svList[i].Nd.ListenReady
 	}
-	time.Sleep(1 * time.Second)  // wait for the servers to accept incoming connections
+	time.Sleep(1 * time.Second) // wait for the servers to accept incoming connections
 	for i := 0; i < cfg.N; i++ {
 		svList[i].Nd.SetupReady <- true // make them to dial each other's RPCs
 	}
 	fmt.Println("[!!!] Please allow the program to accept incoming connections if you are using Mac OS.")
-	time.Sleep(1 * time.Second)  // wait for the servers to accept incoming connections
+	time.Sleep(1 * time.Second) // wait for the servers to accept incoming connections
 	/////////////////
 	cl := pbft.BuildClient(cfg, cfg.IPList[cfg.N], cfg.Ports[cfg.N], 0)
 	start := time.Now()
-	for k := 0; k < NUM_QUEST; k++ {
+	for k := 0; k < NumQuest; k++ {
 		cl.NewRequest("Request "+strconv.Itoa(k), int64(k))
 	}
 	fmt.Println("Finish sending the requests.")
 	finish := make(chan bool)
 	for i := 0; i < cfg.N; i++ {
-		go func(ind int){
+		go func(ind int) {
 			for {
-				c := <- svList[ind].Out
-				if c.Index == NUM_QUEST {
+				c := <-svList[ind].Out
+				if c.Index == NumQuest {
 					finish <- true
 				}
 			}
 
 		}(i)
 	}
-	<- finish
+	<-finish
 	elapsed := time.Since(start)
 	fmt.Println("Test finished. Time cost:", elapsed)
 }

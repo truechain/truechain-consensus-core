@@ -16,13 +16,20 @@ limitations under the License.
 
 package pbft
 
-import "fmt"
-import "github.com/fatih/color"
-import "io/ioutil"
-
-// import "io"
-import "os"
-import "strings"
+import (
+	"crypto/ecdsa"
+	"github.com/fatih/color"
+	"io/ioutil"
+	// "encoding/hex"
+	// "crypto/rand"
+	"crypto/x509"
+	// "github.com/ethereum/go-ethereum/common/math"
+	"encoding/pem"
+	"fmt"
+	"os"
+	"strings"
+	// "io"
+)
 
 func MyPrint(t int, format string, args ...interface{}) {
 	// t: log level
@@ -64,6 +71,33 @@ func MakeDirIfNot(dir string) {
 		err := os.Mkdir(dir, 0777)
 		CheckErr(err)
 	}
+}
+
+func FetchPublicKey(kpath string) *ecdsa.PublicKey {
+	encodedKey, errRead := ioutil.ReadFile(kpath)
+	CheckErr(errRead)
+	blockPub, _ := pem.Decode([]byte(encodedKey))
+	x509EncodedPub := blockPub.Bytes
+	genericPublicKey, _ := x509.ParsePKIXPublicKey(x509EncodedPub)
+	publicKey := genericPublicKey.(*ecdsa.PublicKey)
+	return publicKey
+}
+
+func FetchPrivateKey(kpath string) *ecdsa.PrivateKey {
+	encodedKey, errRead := ioutil.ReadFile(kpath)
+	CheckErr(errRead)
+	block, _ := pem.Decode([]byte(encodedKey))
+	x509Encoded := block.Bytes
+	privateKey, _ := x509.ParseECPrivateKey(x509Encoded)
+	return privateKey
+}
+
+func EncodeECDSAKeys(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) ([]byte, []byte) {
+	x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
+	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+	x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
+	pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
+	return []byte(pemEncoded), []byte(pemEncodedPub)
 }
 
 func GetIPConfigs(s string) ([]string, []int) {
