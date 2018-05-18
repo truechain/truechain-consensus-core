@@ -26,7 +26,6 @@ import (
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
-	"github.com/alecthomas/repr"
 	"math/big"
 	"net"
 	"net/rpc"
@@ -34,6 +33,8 @@ import (
 	"path"
 	"strconv"
 	"sync"
+
+	"github.com/alecthomas/repr"
 )
 
 // const ServerPort = 40162
@@ -51,7 +52,7 @@ const (
 
 // TODO: change all the int to int64 in case of overflow
 
-// go binary encoder
+// ToGOB64 is a go binary encoder
 func ToGOB64(m []byte) string {
 	b := bytes.Buffer{}
 	e := gob.NewEncoder(&b)

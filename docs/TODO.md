@@ -1,3 +1,9 @@
+### bugs
+
+- [ ] RPC error `panic: open /Users/foo/keys/sign67.pem: too many open files` 
+      with high host count (~/hosts) (maybe >40, check limit)
+- [ ] issue PR#3 `sync.runtime_SemacquireMutex(0xc4203cc67c, 0x0)` error in lock mechanism 
+
 ### overall
 
 - [ ] gRPC secure with TLS
