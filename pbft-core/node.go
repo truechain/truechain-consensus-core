@@ -266,9 +266,10 @@ func (req *Request) addSig(privKey *ecdsa.PrivateKey) {
 	e := gob.NewEncoder(&b)
 	err := e.Encode(req.Inner)
 	if err != nil {
-		MyPrint(3, "%s", `failed to encode!\n`)
-		fmt.Println(err)
+		MyPrint(3, "%s err:%s", `failed to encode!\n`, err.Error())
+		return
 	}
+
 	s := getHash(string(b.Bytes()))
 	MyPrint(1, "digest %s.\n", string(s))
 	req.Dig = DigType(s)
@@ -288,8 +289,10 @@ func (req *Request) verifyDig() bool {
 	e := gob.NewEncoder(&b)
 	err := e.Encode(req.Inner)
 	if err != nil {
-		MyPrint(3, "%s", `failed to encode!`)
+		MyPrint(3, "%s err:%s", `failed to encode!`, err.Error())
+		return false
 	}
+
 	s := getHash(string(b.Bytes()))
 	return s == string(req.Dig)
 }
@@ -513,13 +516,17 @@ func (nd *Node) executeInOrder(req Request) {
 		if ok {
 			seq++
 			r = rtemp
+			nd.mu.Lock()
 			delete(nd.waiting, seq)
+			nd.mu.Unlock()
 		}
 
 	}
 
 	if waiting {
+		nd.mu.Lock()
 		nd.waiting[req.Inner.Seq] = req
+		nd.mu.Unlock()
 	}
 }
 
@@ -531,7 +538,7 @@ func (nd *Node) serverLoop() {
 
 	l, e := net.Listen("tcp", ":"+strconv.Itoa(nd.port))
 	if e != nil {
-		MyPrint(3, "listen error:", e)
+		MyPrint(3, "listen error:%s", e.Error())
 	}
 
 	go server.Accept(l)
@@ -550,12 +557,8 @@ func (nd *Node) processCheckpoint(req Request, clientID int) {
 }
 
 func (nd *Node) isInClientLog(req Request) bool {
-	req, ok := nd.clientMessageLog[clientMessageLogItem{req.Inner.Id, req.Inner.Timestamp}]
-	if !ok {
-		return false
-	} else {
-		return true
-	}
+	_, ok := nd.clientMessageLog[clientMessageLogItem{req.Inner.Id, req.Inner.Timestamp}]
+	return ok
 }
 
 func (nd *Node) addClientLog(req Request) {
@@ -674,6 +677,8 @@ func (nd *Node) initializeKeys() {
 }
 
 func (nd *Node) incPrepDict(dig DigType) {
+	nd.mu.Lock()
+	defer nd.mu.Unlock()
 	if val, ok := nd.prepDict[dig]; ok {
 		val.number++
 		nd.prepDict[dig] = val
@@ -683,6 +688,8 @@ func (nd *Node) incPrepDict(dig DigType) {
 }
 
 func (nd *Node) incCommDict(dig DigType) {
+	nd.mu.Lock()
+	defer nd.mu.Unlock()
 	if val, ok := nd.commDict[dig]; ok {
 		val.number++
 		nd.commDict[dig] = val
@@ -761,9 +768,7 @@ func (nd *Node) processPrePrepare(req Request, clientID int) {
 	m := nd.createRequest(typePrepare, req.Inner.Seq, MsgType(req.Inner.Msg)) // TODO: check content!
 	nd.nodeMessageLog.set(m.Inner.Reqtype, m.Inner.Seq, m.Inner.Id, m)
 	nd.recordPBFT(m)
-	nd.mu.Lock()
 	nd.incPrepDict(DigType(req.Inner.Msg))
-	nd.mu.Unlock()
 	nd.broadcast(m)
 	if nd.checkPrepareMargin(DigType(req.Inner.Msg), req.Inner.Seq) { // TODO: check dig vs Inner.Msg
 		nd.record("PREPARED sequence number " + strconv.Itoa(req.Inner.Seq) + "\n")
@@ -811,18 +816,14 @@ func (nd *Node) addNodeHistory(req Request) {
 
 func (nd *Node) processPrepare(req Request, clientID int) {
 	nd.addNodeHistory(req)
-	nd.mu.Lock()
 	nd.incPrepDict(DigType(req.Inner.Msg))
-	nd.mu.Unlock()
 	if nd.checkPrepareMargin(DigType(req.Inner.Msg), req.Inner.Seq) { // TODO: check dig vs Inner.Msg
 		MyPrint(2, "[%d] Checked Margin\n", nd.id)
 		nd.record("PREPARED sequence number " + strconv.Itoa(req.Inner.Seq) + "\n")
 		m := nd.createRequest(typeCommit, req.Inner.Seq, req.Inner.Msg) // TODO: check content
 		nd.broadcast(m)
 		nd.nodeMessageLog.set(m.Inner.Reqtype, m.Inner.Seq, m.Inner.Id, m)
-		nd.mu.Lock()
 		nd.incCommDict(m.Dig) //TODO: check content
-		nd.mu.Unlock()
 		nd.recordPBFT(m)
 		nd.prepared[req.Inner.Seq] = m // or msg?
 		if nd.checkCommittedMargin(m.Dig, m) {
@@ -835,9 +836,7 @@ func (nd *Node) processPrepare(req Request, clientID int) {
 
 func (nd *Node) processCommit(req Request) {
 	nd.addNodeHistory(req)
-	nd.mu.Lock()
 	nd.incCommDict(DigType(req.Inner.Msg))
-	nd.mu.Unlock()
 	if nd.checkCommittedMargin(DigType(req.Inner.Msg), req) {
 		MyPrint(2, "[%d] Committed %v\n", nd.id, req)
 		nd.record("COMMITTED seq number " + strconv.Itoa(req.Inner.Seq))
