@@ -8,7 +8,7 @@ git_commit_hash() {
     echo $(git rev-parse --short HEAD)
 }
 
-export GOPATH=`pwd`:`pwd`/..
+export GOPATH=$GOPATH:`pwd`:`pwd`/..
 
 OUTDIR="bin/$GOOS"
 mkdir -p "$OUTDIR"

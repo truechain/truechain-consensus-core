@@ -7,21 +7,27 @@ This code base is an ongoing implementation of Practical Byzantine Fault Toleran
 
 Although there exists a bunch of existing PBFT implementations, we decide to write our own version to get fully control of every details and to conveniently make necessary extensions so that it could fit into the hybrid consensus protocol (which requires more than a standard PBFT).
 
-### Benchmark
+
+### Build & Installation
+
+This project uses [HyperMake](https://github.com/evo-cloud/hmake) to manage dependencies in a containerized environment.
+
+But you could choose to build without using containers. For a very basic sanity test, run the following:
+
+```
+./support/scripts/build.sh linux
+./bin/linux/truechain-engine
+```
+
+Note: you could also use `darwin` as an argument to build.sh instead of `linux` to get a different platform binary. Support for this will be extended soon.
+
+This triggers both server and client subroutines. Also displays progress of key signing, data exchange and ledger log.
+
+### Deployment
 
 To be added.
 
-### How to re-use
-
-For a very basic sanity test, run the following:
-
-```
-go build engine.go && ./engine
-```
-
-This triggers both server and client subroutines and displays progress of key signing, data exchange and ledger log is written to the same folder.
-
-### Deployment
+### Benchmark
 
 To be added.
 
