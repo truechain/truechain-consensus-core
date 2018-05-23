@@ -17,10 +17,10 @@ limitations under the License.
 package main
 
 import (
-	"./pbft-core"
 	"fmt"
 	"os"
 	"path"
+	"pbft-core"
 	"strconv"
 	"time"
 )
