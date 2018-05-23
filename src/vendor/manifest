@@ -1,0 +1,21 @@
+{
+    "version": 0,
+    "dependencies": [
+        {
+            "importpath": "github.com/alecthomas/repr",
+            "repository": "https://github.com/alecthomas/repr",
+            "vcs": "git",
+            "revision": "07932d32eb40f059e08923e049c47a7d1e1b5ead",
+            "branch": "master",
+            "notests": true
+        },
+        {
+            "importpath": "github.com/fatih/color",
+            "repository": "https://github.com/fatih/color",
+            "vcs": "git",
+            "revision": "5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4",
+            "branch": "master",
+            "notests": true
+        }
+    ]
+}
