@@ -28,7 +28,7 @@ import (
 func main() {
 
 	cfg := pbft.Config{}
-	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts")
+	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts") // TODO: read from config.yaml in future.
 	cfg.IPList, cfg.Ports = pbft.GetIPConfigs(cfg.HostsFile)
 	fmt.Printf("Get IPList %v, Ports %v\n", cfg.IPList, cfg.Ports)
 	cfg.NumKeys = len(cfg.IPList)
@@ -54,13 +54,14 @@ func main() {
 	cl := pbft.BuildClient(cfg, cfg.IPList[cfg.N], cfg.Ports[cfg.N], 0)
 	start := time.Now()
 	for k := 0; k < cfg.NumQuest; k++ {
-		cl.NewRequest("Request "+strconv.Itoa(k), int64(k))
+		cl.NewRequest("Request "+strconv.Itoa(k), int64(k)) // A random string Request{1,2,3,4....} and fake timestamp k
 	}
 	fmt.Println("Finish sending the requests.")
 	finish := make(chan bool)
 	for i := 0; i < cfg.N; i++ {
 		go func(ind int) {
 			for {
+				// place where channel data is extracted out of Node's channel context
 				c := <-svList[ind].Out
 				if c.Index == cfg.NumQuest {
 					finish <- true

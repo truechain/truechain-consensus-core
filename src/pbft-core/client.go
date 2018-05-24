@@ -24,6 +24,8 @@ import (
 	"strconv"
 )
 
+// Client makes queries to what it believes to be the primary replica.
+// Below defines the major properties of a client resource
 type Client struct {
 	IP      string
 	Port    int
@@ -34,11 +36,13 @@ type Client struct {
 	peers   []*rpc.Client // directly contact Server.Nd
 }
 
+// Start is a notifier of client's init state
 func (cl *Client) Start() {
 	MyPrint(1, "Firing up client executioner...\n")
 
 }
 
+// NewRequest takes in a message and timestamp as params for a new request from client
 func (cl *Client) NewRequest(msg string, timeStamp int64) {
 	//broadcast the request
 	for i := 0; i < cl.Cfg.N; i++ {
@@ -52,6 +56,7 @@ func (cl *Client) NewRequest(msg string, timeStamp int64) {
 	}
 }
 
+// BuildClient dials up connections to tease and test hot bft nodes
 func BuildClient(cfg Config, IP string, Port int, me int) *Client {
 	cl := &Client{}
 	cl.IP = IP
@@ -72,7 +77,6 @@ func BuildClient(cfg Config, IP string, Port int, me int) *Client {
 	fmt.Println("just fetched private key for Client")
 	fmt.Println(sk)
 	cl.privKey = sk
-	// TODO: prepare ecdsa private key for the client
 	go cl.Start() // in case client has some initial logic
 	return cl
 }

@@ -32,6 +32,8 @@ import (
 	"path/filepath"
 )
 
+// GetCWD provides the current work dir's absolute filepath,
+// where CWD is the one where truechain-engine binary shots were was fired from.
 func GetCWD() string {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
@@ -48,17 +50,19 @@ func GetCWD() string {
 //     return []byte(pemEncoded), []byte(pemEncodedPub)
 // }
 
+// WriteNewKeys generates kcount # of ECDSA public-private key pairs and writes them
+// into a folder kdir.
 func WriteNewKeys(kcount int, kdir string) {
 	for k := 0; k < kcount; k++ {
 		privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		publicKey := &privateKey.PublicKey
 		pemEncoded, pemEncodedPub := EncodeECDSAKeys(privateKey, publicKey)
 
-		pemkey_filename := fmt.Sprintf("sign%v.pem", k)
-		err1 := ioutil.WriteFile(path.Join(kdir, pemkey_filename), pemEncoded, 0644)
+		pemkeyFname := fmt.Sprintf("sign%v.pem", k)
+		err1 := ioutil.WriteFile(path.Join(kdir, pemkeyFname), pemEncoded, 0644)
 		CheckErr(err1)
-		pubkey_filename := fmt.Sprintf("sign%v.pub", k)
-		err2 := ioutil.WriteFile(path.Join(kdir, pubkey_filename), pemEncodedPub, 0644)
+		pubkeyFname := fmt.Sprintf("sign%v.pub", k)
+		err2 := ioutil.WriteFile(path.Join(kdir, pubkeyFname), pemEncodedPub, 0644)
 		CheckErr(err2)
 	}
 }

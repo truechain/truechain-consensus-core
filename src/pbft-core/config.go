@@ -22,11 +22,14 @@ import (
 
 // MaxFail defines the number of faults to be tolerated
 const MaxFail = 1
+
+// OutputThreshold is an auxiliary to utils.MyPrint for verbosity
 const OutputThreshold = 0
 
 // BasePort is used as base value of ports defined for initializng PBFT servers
 const BasePort = 40540
 
+// Config is a generic struct used by each node to interact with connection pool details
 type Config struct {
 	N         int      // number of nodes to be launchedt
 	KD        string   // key directory where pub/priva ECDSA keys are stored

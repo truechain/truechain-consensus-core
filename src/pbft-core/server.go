@@ -24,6 +24,7 @@ package pbft
 // "fmt"
 // )
 
+// Server defines the base properties of a Server type node
 type Server struct {
 	IP   string
 	Port int
@@ -32,10 +33,13 @@ type Server struct {
 	Out  chan ApplyMsg
 }
 
+// Start - Initial server logic goes here
 func (sv *Server) Start() {
 	MyPrint(1, "Firing up peer server...\n")
 }
 
+// BuildServer initiates the Server resource properties and listens to client's
+// message requests as well as interacts with the channel
 func BuildServer(cfg Config, IP string, Port int, me int) *Server {
 	sv := &Server{}
 	sv.IP = IP

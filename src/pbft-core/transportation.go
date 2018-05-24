@@ -25,8 +25,7 @@ import (
 	"strconv"
 )
 
-// TODO: implement send/receive messages with RPC
-
+// MakeTransportations - TODO: implement send/receive messages with RPC
 func MakeTransportations(index int) []*rpc.Client {
 	// index: the index if the server itself
 	clientList := make([]*rpc.Client, 0)

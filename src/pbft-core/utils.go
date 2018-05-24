@@ -18,8 +18,9 @@ package pbft
 
 import (
 	"crypto/ecdsa"
-	"github.com/fatih/color"
 	"io/ioutil"
+
+	"github.com/fatih/color"
 	// "encoding/hex"
 	// "crypto/rand"
 	"crypto/x509"
@@ -31,6 +32,7 @@ import (
 	// "io"
 )
 
+// MyPrint provides customized colored output functionality
 func MyPrint(t int, format string, args ...interface{}) {
 	// t: log level
 	// 		0: information
@@ -59,20 +61,23 @@ func MyPrint(t int, format string, args ...interface{}) {
 	}
 }
 
+// CheckErr simply checks errors and panics, as a guilty pleasure.
 func CheckErr(e error) {
 	if e != nil {
 		panic(e)
 	}
 }
 
+//MakeDirIfNot handles dir creation operations
 func MakeDirIfNot(dir string) {
 	_, err := os.Stat(dir)
 	if os.IsNotExist(err) {
-		err := os.Mkdir(dir, 0777)
+		err := os.Mkdir(dir, 0750)
 		CheckErr(err)
 	}
 }
 
+// FetchPublicKey reads and decodes a public key from file stored on disk
 func FetchPublicKey(kpath string) *ecdsa.PublicKey {
 	encodedKey, errRead := ioutil.ReadFile(kpath)
 	CheckErr(errRead)
@@ -83,6 +88,7 @@ func FetchPublicKey(kpath string) *ecdsa.PublicKey {
 	return publicKey
 }
 
+// FetchPrivateKey reads and decodes a private key from file stored on disk
 func FetchPrivateKey(kpath string) *ecdsa.PrivateKey {
 	encodedKey, errRead := ioutil.ReadFile(kpath)
 	CheckErr(errRead)
@@ -92,6 +98,7 @@ func FetchPrivateKey(kpath string) *ecdsa.PrivateKey {
 	return privateKey
 }
 
+// EncodeECDSAKeys takes in ECDSA objects for key pairs and returns encoded []byte formats
 func EncodeECDSAKeys(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) ([]byte, []byte) {
 	x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
 	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
@@ -100,6 +107,7 @@ func EncodeECDSAKeys(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (
 	return []byte(pemEncoded), []byte(pemEncodedPub)
 }
 
+// GetIPConfigs loads all the IPs from the ~/hosts files
 func GetIPConfigs(s string) ([]string, []int) {
 	// s: config file path
 	MyPrint(1, "Loading IP configs...\n")
