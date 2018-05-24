@@ -36,8 +36,6 @@ Then,
 
 ```
 cd $GOPATH/src/github.com/truechain/truechain-consensus-core
-git checkout devel
-
 hmake
 cp bin/{linux/darwin}/truechain-engine $GOBIN/
 ```
@@ -81,8 +79,8 @@ This would add a folder `src/vendor` if not already present, and would also gene
 
 This project uses:
 
-     - [HyperMake](https://github.com/evo-cloud/hmake) to interact with toolchain (containerized environment) and build cross-platform binaries.
-     - `gvt` to manage dependencies.
+- [HyperMake](https://github.com/evo-cloud/hmake) to interact with toolchain (containerized environment) and build cross-platform binaries.
+- `gvt` to manage dependencies.
 
 
 ```
@@ -93,8 +91,8 @@ $ hmake build
 
 The first time, it would download:
 
-    - TrueChain's docker image `go-toolchain` from https://hub.docker.com/r/truechain/go-toolchain/
-    - Dependencies as per `src/vendor/manifest`, which again, could be generated using [gvt](https://github.com/FiloSottile/gvt).
+- TrueChain's docker image `go-toolchain` from https://hub.docker.com/r/truechain/go-toolchain/
+- Dependencies as per `src/vendor/manifest`, which again, could be generated using [gvt](https://github.com/FiloSottile/gvt).
 
 The binaries would be available in `bin/`'s platform-specific folders.
 
