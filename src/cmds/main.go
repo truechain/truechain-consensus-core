@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"pbft-core"
+	"pbft"
 	"strconv"
 	"time"
 )
