@@ -42,6 +42,7 @@ func MyPrint(t int, format string, args ...interface{}) {
 	blue := color.New(color.FgBlue).SprintFunc()
 	yellow := color.New(color.FgYellow).SprintFunc()
 	red := color.New(color.FgRed).SprintFunc()
+	deepPurple := color.New(color.FgGreen).SprintFunc()
 
 	if t >= OutputThreshold {
 
@@ -57,6 +58,9 @@ func MyPrint(t int, format string, args ...interface{}) {
 			break
 		case 3: // error
 			fmt.Printf(red("[x]")+format, args...)
+			break
+		case 4: // magical shit
+			fmt.Printf(deepPurple("[x]")+format, args...)
 		}
 	}
 }

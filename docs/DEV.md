@@ -4,6 +4,23 @@
 
 To be added
 
+## Sample runs while building locally with colored output
+
+```
+# clear previous junk, rebuild binary and output to fresh log
+rm -rf keys/ logs/* && hmake build-linux && script -q -c './bin/linux/truechain-engine 2>&1' > logs/complete_log
+
+# view output (interpreted as binary by Linux, but it's really a color coded log file, dumped by tricking stdout as terminal session)
+cat logs/complete_log.txt  | tr -d '\000' | grep New
+
+# or with less
+less -R logs/complete_log.txt
+```
+
+we use `script` while executing the binary and `tr` while reading from it, so we're able to see colors in log file.
+`grep` mistakes it for a binary by default.
+
+
 ## Debugging
 
 #### using Delve Go Debugger

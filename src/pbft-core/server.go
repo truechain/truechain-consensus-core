@@ -47,6 +47,7 @@ func BuildServer(cfg Config, IP string, Port int, me int) *Server {
 	sv.Out = make(chan ApplyMsg)
 	sv.Cfg = &cfg
 	applyChan := make(chan ApplyMsg)
+
 	go func(aC chan ApplyMsg) {
 		for {
 			c := <-aC
