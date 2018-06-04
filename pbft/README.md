@@ -35,7 +35,7 @@ export PATH=$PATH:$GOBIN
 Then,
 
 ```
-cd $GOPATH/src/github.com/truechain/truechain-consensus-core
+cd $GOPATH/src/github.com/truechain/truechain-consensus-core/pbft
 hmake
 cp bin/{linux/darwin}/truechain-engine $GOBIN/
 ```
