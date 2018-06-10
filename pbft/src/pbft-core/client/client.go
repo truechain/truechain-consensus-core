@@ -14,24 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pbft
+package main
 
 import (
-	"crypto/ecdsa"
 	"fmt"
-	"net/rpc"
-	"path"
-	"strconv"
+	"log"
+	"time"
+
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	pb "pbft-core/fastchain"
 )
 
 // Client makes queries to what it believes to be the primary replica.
 // Below defines the major properties of a client resource
-type Client struct {
+/*type Client struct {
 	IP      string
 	Port    int
 	Index   int
 	Me      int
-	Cfg     *Config
+	Cfg     *pbft.Config
 	privKey *ecdsa.PrivateKey
 	peers   []*rpc.Client // directly contact Server.Nd
 }
@@ -54,10 +56,10 @@ func (cl *Client) NewRequest(msg string, timeStamp int64) {
 		reply := ProxyNewClientRequestReply{}
 		cl.peers[i].Go("Node.ProxyNewClientRequest", arg, &reply, nil) // try synchronize
 	}
-}
+}*/
 
 // BuildClient dials up connections to tease and test hot bft nodes
-func BuildClient(cfg Config, IP string, Port int, me int) *Client {
+/*func BuildClient(cfg Config, IP string, Port int, me int) *Client {
 	cl := &Client{}
 	cl.IP = IP
 	cl.Port = Port
@@ -79,4 +81,24 @@ func BuildClient(cfg Config, IP string, Port int, me int) *Client {
 	cl.privKey = sk
 	go cl.Start() // in case client has some initial logic
 	return cl
+}*/
+
+func main() {
+	// Set up a connection to the server.
+	conn, err := grpc.Dial("localhost:10000", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer conn.Close()
+	c := pb.NewFastChainClient(conn)
+
+	// Contact the server and print out its response.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	r, err := c.CheckLeader(ctx, &pb.CheckLeaderReq{})
+	if err != nil {
+		log.Fatalf("could not check if node is leader: %v", err)
+	}
+
+	fmt.Printf("%d", r.Message)
 }
