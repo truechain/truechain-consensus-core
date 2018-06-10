@@ -1,7 +1,8 @@
 #!/bin/bash
 set -x
 
-export GOOS=$1
+export PACKAGE=$1
+export GOOS=$2
 export GOARCH=amd64
 
 git_commit_hash() {
@@ -21,4 +22,4 @@ LDFLAGS="-s -w -X common.GitCommitHash=$(git_commit_hash)"
 
 go build -o "$OUTDIR"/truechain-engine \
     -ldflags "$LDFLAGS" \
-    cmds/
+    ./src/pbft-core/server/

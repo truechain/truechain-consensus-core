@@ -17,29 +17,38 @@ limitations under the License.
 package main
 
 import (
+	"flag"
 	"fmt"
+	"log"
+	"net"
 	"os"
 	"path"
+
 	"pbft-core"
-	"strconv"
-	"time"
+
+	"google.golang.org/grpc"
+
+	pb "pbft-core/fastchain"
+)
+
+var (
+	port = flag.Int("port", 10000, "The server port")
 )
 
 func main() {
-
 	cfg := pbft.Config{}
 	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts") // TODO: read from config.yaml in future.
 	cfg.IPList, cfg.Ports = pbft.GetIPConfigs(cfg.HostsFile)
-	fmt.Printf("Get IPList %v, Ports %v\n", cfg.IPList, cfg.Ports)
+	//fmt.Printf("Get IPList %v, Ports %v\n", cfg.IPList, cfg.Ports)
 	cfg.NumKeys = len(cfg.IPList)
 	cfg.N = cfg.NumKeys - 1 // we assume client count to be 1
 	cfg.NumQuest = 100
 	cfg.GenerateKeysToFile(cfg.NumKeys)
 
-	svList := make([]*pbft.Server, cfg.N)
+	/*svList := make([]*Server, cfg.N)
 	for i := 0; i < cfg.N; i++ {
 		fmt.Println(cfg.IPList[i], cfg.Ports[i], i)
-		svList[i] = pbft.BuildServer(cfg, cfg.IPList[i], cfg.Ports[i], i)
+		svList[i] = BuildServer(cfg, cfg.IPList[i], cfg.Ports[i], i)
 	}
 	for i := 0; i < cfg.N; i++ {
 		<-svList[i].Nd.ListenReady
@@ -47,11 +56,11 @@ func main() {
 	time.Sleep(1 * time.Second) // wait for the servers to accept incoming connections
 	for i := 0; i < cfg.N; i++ {
 		svList[i].Nd.SetupReady <- true // make them to dial each other's RPCs
-	}
-	fmt.Println("[!!!] Please allow the program to accept incoming connections if you are using Mac OS.")
-	time.Sleep(1 * time.Second) // wait for the servers to accept incoming connections
+	}*/
+	//fmt.Println("[!!!] Please allow the program to accept incoming connections if you are using Mac OS.")
+	//time.Sleep(1 * time.Second) // wait for the servers to accept incoming connections
 
-	cl := pbft.BuildClient(cfg, cfg.IPList[cfg.N], cfg.Ports[cfg.N], 0)
+	/*cl := BuildClient(cfg, cfg.IPList[cfg.N], cfg.Ports[cfg.N], 0)
 	start := time.Now()
 	for k := 0; k < cfg.NumQuest; k++ {
 		cl.NewRequest("Request "+strconv.Itoa(k), int64(k)) // A random string Request{1,2,3,4....} and fake timestamp k
@@ -71,6 +80,15 @@ func main() {
 		}(i)
 	}
 	<-finish
-	elapsed := time.Since(start)
-	fmt.Println("Test finished. Time cost:", elapsed)
+	elapsed := time.Since(start)*/
+
+	flag.Parse()
+	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	grpcServer := grpc.NewServer()
+	pb.RegisterFastChainServer(grpcServer, BuildServer(cfg, cfg.IPList[0], cfg.Ports[0], 0))
+	grpcServer.Serve(lis)
+	//fmt.Println("Test finished. Time cost:", elapsed)
 }

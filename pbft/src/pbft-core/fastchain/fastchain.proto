@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package fastchain;
+
+//Interface exposed by fastchain committee nodes
+service FastChain {
+        //RPC service that responds whether the node is the leader
+        rpc CheckLeader (CheckLeaderReq) returns (CheckLeaderResp) {}
+}
+
+message CheckLeaderReq {}
+message CheckLeaderResp {
+        bool message = 1;
+}
+
