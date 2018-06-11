@@ -2,10 +2,13 @@ syntax = "proto3";
 
 package fastchain;
 
-//Interface exposed by fastchain committee nodes
-service FastChain {
+//Interface exposed by pbft committee nodes
+service Pbft {
         //RPC service that responds whether the node is the leader
         rpc CheckLeader (CheckLeaderReq) returns (CheckLeaderResp) {}
+        
+        //Send new transaction to presumed leader node
+        rpc NewTxnRequest (Transaction) returns (GenericResp) {}
 }
 
 message CheckLeaderReq {}
@@ -13,3 +16,50 @@ message CheckLeaderResp {
         bool message = 1;
 }
 
+message PbftNode {
+    string addr	     = 1;
+    string pubkey    = 2;
+    string privkey   = 3;
+}
+
+message Nodes {
+    repeated PbftNode nodes = 1;
+}
+
+message PbftBlockHeader {
+    int64  Number 	= 1;
+    int64  GasLimit     = 2;
+    int64  GasUsed	= 3;
+    int64  Time		= 4;
+}
+message TxnData {
+    uint64 AccountNonce       	 = 1;
+    int64  Price 	     	 = 2;
+    int64  GasLimit		 = 3;
+    bytes  Recipient		 = 4;
+    int64  Amount 		 = 5;
+    bytes  Payload		 = 6;
+    
+    int64  V 			 = 7;
+    int64  R			 = 8;
+    int64  S			 = 9;
+
+    bytes Hash			 = 10;
+}
+message Transaction {
+    TxnData data 		 = 1;
+}
+
+message Transactions {
+    repeated Transaction txns = 1;
+}
+
+message PbftBlock {
+    PbftBlockHeader   header    = 1;
+    Transactions      txns      = 2;
+    repeated string   signs     = 3;   
+}
+
+message GenericResp {
+        string msg = 1;
+}

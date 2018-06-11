@@ -1159,7 +1159,7 @@ func (nd *Node) setupConnections() {
 
 // Make registers all node config objects,
 func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequests int) *Node {
-	gob.Register(&ApplyMsg{})
+	/*gob.Register(&ApplyMsg{})
 	gob.Register(&RequestInner{})
 	gob.Register(&Request{})
 	gob.Register(&checkpointProofType{})
@@ -1176,10 +1176,10 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequ
 	gob.Register(&ProxyProcessPrepareArg{})
 	gob.Register(&ProxyProcessPrepareReply{})
 	gob.Register(&ProxyProcessViewChangeArg{})
-	gob.Register(&ProxyProcessViewChangeReply{})
+	gob.Register(&ProxyProcessViewChangeReply{})*/
 
 	nd := &Node{}
-	rpc.Register(nd)
+	//rpc.Register(nd)
 	nd.cfg = cfg
 	nd.N = cfg.N
 	nd.f = (nd.N - 1) / 3
@@ -1218,7 +1218,7 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequ
 	nd.cfg.LD = path.Join(GetCWD(), "logs/")
 	// kfpath := path.Join(cfg.KD, filename)
 
-	MakeDirIfNot(nd.cfg.LD) //handles 'already exists'
+	/*MakeDirIfNot(nd.cfg.LD) //handles 'already exists'
 	fi, err := os.Create(path.Join(nd.cfg.LD, "PBFTLog"+strconv.Itoa(nd.ID)+".txt"))
 	if err == nil {
 		nd.outputLog = fi
@@ -1239,6 +1239,6 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequ
 	nd.waiting = make(map[int]Request)
 	go nd.setupConnections()
 
-	go nd.serverLoop()
+	go nd.serverLoop()*/
 	return nd
 }

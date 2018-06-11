@@ -19,7 +19,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -90,15 +89,23 @@ func main() {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
-	c := pb.NewFastChainClient(conn)
+	c := pb.NewPbftClient(conn)
 
 	// Contact the server and print out its response.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	r, err := c.CheckLeader(ctx, &pb.CheckLeaderReq{})
+	ctx := context.TODO()
+
+	checkLeaderResp, err := c.CheckLeader(ctx, &pb.CheckLeaderReq{})
 	if err != nil {
 		log.Fatalf("could not check if node is leader: %v", err)
 	}
 
-	fmt.Printf("%d", r.Message)
+	fmt.Printf("%d", checkLeaderResp.Message)
+
+	txnData := &pb.TxnData{}
+	txnResp, err := c.NewTxnRequest(ctx, &pb.Transaction{Data: txnData})
+	if err != nil {
+		log.Fatalf("could not send transaction request to pbft node: %v", err)
+	}
+
+	fmt.Printf("%d", txnResp.Msg)
 }

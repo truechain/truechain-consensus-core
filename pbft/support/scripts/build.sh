@@ -19,11 +19,11 @@ fi
 
 LDFLAGS="-s -w -X common.GitCommitHash=$(git_commit_hash)"
 
-go build -o "$OUTDIR"/truechain-engine \
+go build -o "$OUTDIR"/pbft-server \
     -ldflags "$LDFLAGS" \
-    ./src/pbft-core/server/
+    ./src/pbft-core/pbft-server/
 
-go build -o "$OUTDIR"/truechain-engine-client \
+go build -o "$OUTDIR"/pbft-client \
     -ldflags "$LDFLAGS" \
     ./src/pbft-core/client/
 
