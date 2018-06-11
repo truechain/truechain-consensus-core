@@ -33,7 +33,7 @@ func (m *CheckLeaderReq) Reset()         { *m = CheckLeaderReq{} }
 func (m *CheckLeaderReq) String() string { return proto.CompactTextString(m) }
 func (*CheckLeaderReq) ProtoMessage()    {}
 func (*CheckLeaderReq) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fastchain_ec67cbc80a8b82c2, []int{0}
+	return fileDescriptor_fastchain_fbe2eb567c474fc6, []int{0}
 }
 func (m *CheckLeaderReq) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CheckLeaderReq.Unmarshal(m, b)
@@ -64,7 +64,7 @@ func (m *CheckLeaderResp) Reset()         { *m = CheckLeaderResp{} }
 func (m *CheckLeaderResp) String() string { return proto.CompactTextString(m) }
 func (*CheckLeaderResp) ProtoMessage()    {}
 func (*CheckLeaderResp) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fastchain_ec67cbc80a8b82c2, []int{1}
+	return fileDescriptor_fastchain_fbe2eb567c474fc6, []int{1}
 }
 func (m *CheckLeaderResp) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CheckLeaderResp.Unmarshal(m, b)
@@ -91,9 +91,449 @@ func (m *CheckLeaderResp) GetMessage() bool {
 	return false
 }
 
+type PbftNode struct {
+	Addr                 string   `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
+	Pubkey               string   `protobuf:"bytes,2,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
+	Privkey              string   `protobuf:"bytes,3,opt,name=privkey,proto3" json:"privkey,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *PbftNode) Reset()         { *m = PbftNode{} }
+func (m *PbftNode) String() string { return proto.CompactTextString(m) }
+func (*PbftNode) ProtoMessage()    {}
+func (*PbftNode) Descriptor() ([]byte, []int) {
+	return fileDescriptor_fastchain_fbe2eb567c474fc6, []int{2}
+}
+func (m *PbftNode) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PbftNode.Unmarshal(m, b)
+}
+func (m *PbftNode) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PbftNode.Marshal(b, m, deterministic)
+}
+func (dst *PbftNode) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PbftNode.Merge(dst, src)
+}
+func (m *PbftNode) XXX_Size() int {
+	return xxx_messageInfo_PbftNode.Size(m)
+}
+func (m *PbftNode) XXX_DiscardUnknown() {
+	xxx_messageInfo_PbftNode.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PbftNode proto.InternalMessageInfo
+
+func (m *PbftNode) GetAddr() string {
+	if m != nil {
+		return m.Addr
+	}
+	return ""
+}
+
+func (m *PbftNode) GetPubkey() string {
+	if m != nil {
+		return m.Pubkey
+	}
+	return ""
+}
+
+func (m *PbftNode) GetPrivkey() string {
+	if m != nil {
+		return m.Privkey
+	}
+	return ""
+}
+
+type Nodes struct {
+	Nodes                []*PbftNode `protobuf:"bytes,1,rep,name=nodes,proto3" json:"nodes,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+
+func (m *Nodes) Reset()         { *m = Nodes{} }
+func (m *Nodes) String() string { return proto.CompactTextString(m) }
+func (*Nodes) ProtoMessage()    {}
+func (*Nodes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_fastchain_fbe2eb567c474fc6, []int{3}
+}
+func (m *Nodes) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Nodes.Unmarshal(m, b)
+}
+func (m *Nodes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Nodes.Marshal(b, m, deterministic)
+}
+func (dst *Nodes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Nodes.Merge(dst, src)
+}
+func (m *Nodes) XXX_Size() int {
+	return xxx_messageInfo_Nodes.Size(m)
+}
+func (m *Nodes) XXX_DiscardUnknown() {
+	xxx_messageInfo_Nodes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Nodes proto.InternalMessageInfo
+
+func (m *Nodes) GetNodes() []*PbftNode {
+	if m != nil {
+		return m.Nodes
+	}
+	return nil
+}
+
+type PbftBlockHeader struct {
+	Number               int64    `protobuf:"varint,1,opt,name=Number,proto3" json:"Number,omitempty"`
+	GasLimit             int64    `protobuf:"varint,2,opt,name=GasLimit,proto3" json:"GasLimit,omitempty"`
+	GasUsed              int64    `protobuf:"varint,3,opt,name=GasUsed,proto3" json:"GasUsed,omitempty"`
+	Time                 int64    `protobuf:"varint,4,opt,name=Time,proto3" json:"Time,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *PbftBlockHeader) Reset()         { *m = PbftBlockHeader{} }
+func (m *PbftBlockHeader) String() string { return proto.CompactTextString(m) }
+func (*PbftBlockHeader) ProtoMessage()    {}
+func (*PbftBlockHeader) Descriptor() ([]byte, []int) {
+	return fileDescriptor_fastchain_fbe2eb567c474fc6, []int{4}
+}
+func (m *PbftBlockHeader) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PbftBlockHeader.Unmarshal(m, b)
+}
+func (m *PbftBlockHeader) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PbftBlockHeader.Marshal(b, m, deterministic)
+}
+func (dst *PbftBlockHeader) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PbftBlockHeader.Merge(dst, src)
+}
+func (m *PbftBlockHeader) XXX_Size() int {
+	return xxx_messageInfo_PbftBlockHeader.Size(m)
+}
+func (m *PbftBlockHeader) XXX_DiscardUnknown() {
+	xxx_messageInfo_PbftBlockHeader.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PbftBlockHeader proto.InternalMessageInfo
+
+func (m *PbftBlockHeader) GetNumber() int64 {
+	if m != nil {
+		return m.Number
+	}
+	return 0
+}
+
+func (m *PbftBlockHeader) GetGasLimit() int64 {
+	if m != nil {
+		return m.GasLimit
+	}
+	return 0
+}
+
+func (m *PbftBlockHeader) GetGasUsed() int64 {
+	if m != nil {
+		return m.GasUsed
+	}
+	return 0
+}
+
+func (m *PbftBlockHeader) GetTime() int64 {
+	if m != nil {
+		return m.Time
+	}
+	return 0
+}
+
+type TxnData struct {
+	AccountNonce         uint64   `protobuf:"varint,1,opt,name=AccountNonce,proto3" json:"AccountNonce,omitempty"`
+	Price                int64    `protobuf:"varint,2,opt,name=Price,proto3" json:"Price,omitempty"`
+	GasLimit             int64    `protobuf:"varint,3,opt,name=GasLimit,proto3" json:"GasLimit,omitempty"`
+	Recipient            []byte   `protobuf:"bytes,4,opt,name=Recipient,proto3" json:"Recipient,omitempty"`
+	Amount               int64    `protobuf:"varint,5,opt,name=Amount,proto3" json:"Amount,omitempty"`
+	Payload              []byte   `protobuf:"bytes,6,opt,name=Payload,proto3" json:"Payload,omitempty"`
+	V                    int64    `protobuf:"varint,7,opt,name=V,proto3" json:"V,omitempty"`
+	R                    int64    `protobuf:"varint,8,opt,name=R,proto3" json:"R,omitempty"`
+	S                    int64    `protobuf:"varint,9,opt,name=S,proto3" json:"S,omitempty"`
+	Hash                 []byte   `protobuf:"bytes,10,opt,name=Hash,proto3" json:"Hash,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *TxnData) Reset()         { *m = TxnData{} }
+func (m *TxnData) String() string { return proto.CompactTextString(m) }
+func (*TxnData) ProtoMessage()    {}
+func (*TxnData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_fastchain_fbe2eb567c474fc6, []int{5}
+}
+func (m *TxnData) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TxnData.Unmarshal(m, b)
+}
+func (m *TxnData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TxnData.Marshal(b, m, deterministic)
+}
+func (dst *TxnData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TxnData.Merge(dst, src)
+}
+func (m *TxnData) XXX_Size() int {
+	return xxx_messageInfo_TxnData.Size(m)
+}
+func (m *TxnData) XXX_DiscardUnknown() {
+	xxx_messageInfo_TxnData.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TxnData proto.InternalMessageInfo
+
+func (m *TxnData) GetAccountNonce() uint64 {
+	if m != nil {
+		return m.AccountNonce
+	}
+	return 0
+}
+
+func (m *TxnData) GetPrice() int64 {
+	if m != nil {
+		return m.Price
+	}
+	return 0
+}
+
+func (m *TxnData) GetGasLimit() int64 {
+	if m != nil {
+		return m.GasLimit
+	}
+	return 0
+}
+
+func (m *TxnData) GetRecipient() []byte {
+	if m != nil {
+		return m.Recipient
+	}
+	return nil
+}
+
+func (m *TxnData) GetAmount() int64 {
+	if m != nil {
+		return m.Amount
+	}
+	return 0
+}
+
+func (m *TxnData) GetPayload() []byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
+func (m *TxnData) GetV() int64 {
+	if m != nil {
+		return m.V
+	}
+	return 0
+}
+
+func (m *TxnData) GetR() int64 {
+	if m != nil {
+		return m.R
+	}
+	return 0
+}
+
+func (m *TxnData) GetS() int64 {
+	if m != nil {
+		return m.S
+	}
+	return 0
+}
+
+func (m *TxnData) GetHash() []byte {
+	if m != nil {
+		return m.Hash
+	}
+	return nil
+}
+
+type Transaction struct {
+	Data                 *TxnData `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Transaction) Reset()         { *m = Transaction{} }
+func (m *Transaction) String() string { return proto.CompactTextString(m) }
+func (*Transaction) ProtoMessage()    {}
+func (*Transaction) Descriptor() ([]byte, []int) {
+	return fileDescriptor_fastchain_fbe2eb567c474fc6, []int{6}
+}
+func (m *Transaction) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Transaction.Unmarshal(m, b)
+}
+func (m *Transaction) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Transaction.Marshal(b, m, deterministic)
+}
+func (dst *Transaction) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Transaction.Merge(dst, src)
+}
+func (m *Transaction) XXX_Size() int {
+	return xxx_messageInfo_Transaction.Size(m)
+}
+func (m *Transaction) XXX_DiscardUnknown() {
+	xxx_messageInfo_Transaction.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Transaction proto.InternalMessageInfo
+
+func (m *Transaction) GetData() *TxnData {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+type Transactions struct {
+	Txns                 []*Transaction `protobuf:"bytes,1,rep,name=txns,proto3" json:"txns,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
+}
+
+func (m *Transactions) Reset()         { *m = Transactions{} }
+func (m *Transactions) String() string { return proto.CompactTextString(m) }
+func (*Transactions) ProtoMessage()    {}
+func (*Transactions) Descriptor() ([]byte, []int) {
+	return fileDescriptor_fastchain_fbe2eb567c474fc6, []int{7}
+}
+func (m *Transactions) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Transactions.Unmarshal(m, b)
+}
+func (m *Transactions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Transactions.Marshal(b, m, deterministic)
+}
+func (dst *Transactions) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Transactions.Merge(dst, src)
+}
+func (m *Transactions) XXX_Size() int {
+	return xxx_messageInfo_Transactions.Size(m)
+}
+func (m *Transactions) XXX_DiscardUnknown() {
+	xxx_messageInfo_Transactions.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Transactions proto.InternalMessageInfo
+
+func (m *Transactions) GetTxns() []*Transaction {
+	if m != nil {
+		return m.Txns
+	}
+	return nil
+}
+
+type PbftBlock struct {
+	Header               *PbftBlockHeader `protobuf:"bytes,1,opt,name=header,proto3" json:"header,omitempty"`
+	Txns                 *Transactions    `protobuf:"bytes,2,opt,name=txns,proto3" json:"txns,omitempty"`
+	Signs                []string         `protobuf:"bytes,3,rep,name=signs,proto3" json:"signs,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
+}
+
+func (m *PbftBlock) Reset()         { *m = PbftBlock{} }
+func (m *PbftBlock) String() string { return proto.CompactTextString(m) }
+func (*PbftBlock) ProtoMessage()    {}
+func (*PbftBlock) Descriptor() ([]byte, []int) {
+	return fileDescriptor_fastchain_fbe2eb567c474fc6, []int{8}
+}
+func (m *PbftBlock) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PbftBlock.Unmarshal(m, b)
+}
+func (m *PbftBlock) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PbftBlock.Marshal(b, m, deterministic)
+}
+func (dst *PbftBlock) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PbftBlock.Merge(dst, src)
+}
+func (m *PbftBlock) XXX_Size() int {
+	return xxx_messageInfo_PbftBlock.Size(m)
+}
+func (m *PbftBlock) XXX_DiscardUnknown() {
+	xxx_messageInfo_PbftBlock.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PbftBlock proto.InternalMessageInfo
+
+func (m *PbftBlock) GetHeader() *PbftBlockHeader {
+	if m != nil {
+		return m.Header
+	}
+	return nil
+}
+
+func (m *PbftBlock) GetTxns() *Transactions {
+	if m != nil {
+		return m.Txns
+	}
+	return nil
+}
+
+func (m *PbftBlock) GetSigns() []string {
+	if m != nil {
+		return m.Signs
+	}
+	return nil
+}
+
+type GenericResp struct {
+	Msg                  string   `protobuf:"bytes,1,opt,name=msg,proto3" json:"msg,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GenericResp) Reset()         { *m = GenericResp{} }
+func (m *GenericResp) String() string { return proto.CompactTextString(m) }
+func (*GenericResp) ProtoMessage()    {}
+func (*GenericResp) Descriptor() ([]byte, []int) {
+	return fileDescriptor_fastchain_fbe2eb567c474fc6, []int{9}
+}
+func (m *GenericResp) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GenericResp.Unmarshal(m, b)
+}
+func (m *GenericResp) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GenericResp.Marshal(b, m, deterministic)
+}
+func (dst *GenericResp) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GenericResp.Merge(dst, src)
+}
+func (m *GenericResp) XXX_Size() int {
+	return xxx_messageInfo_GenericResp.Size(m)
+}
+func (m *GenericResp) XXX_DiscardUnknown() {
+	xxx_messageInfo_GenericResp.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GenericResp proto.InternalMessageInfo
+
+func (m *GenericResp) GetMsg() string {
+	if m != nil {
+		return m.Msg
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterType((*CheckLeaderReq)(nil), "fastchain.CheckLeaderReq")
 	proto.RegisterType((*CheckLeaderResp)(nil), "fastchain.CheckLeaderResp")
+	proto.RegisterType((*PbftNode)(nil), "fastchain.PbftNode")
+	proto.RegisterType((*Nodes)(nil), "fastchain.Nodes")
+	proto.RegisterType((*PbftBlockHeader)(nil), "fastchain.PbftBlockHeader")
+	proto.RegisterType((*TxnData)(nil), "fastchain.TxnData")
+	proto.RegisterType((*Transaction)(nil), "fastchain.Transaction")
+	proto.RegisterType((*Transactions)(nil), "fastchain.Transactions")
+	proto.RegisterType((*PbftBlock)(nil), "fastchain.PbftBlock")
+	proto.RegisterType((*GenericResp)(nil), "fastchain.GenericResp")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -104,83 +544,142 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// FastChainClient is the client API for FastChain service.
+// PbftClient is the client API for Pbft service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type FastChainClient interface {
+type PbftClient interface {
 	// RPC service that responds whether the node is the leader
 	CheckLeader(ctx context.Context, in *CheckLeaderReq, opts ...grpc.CallOption) (*CheckLeaderResp, error)
+	// Send new transaction to presumed leader node
+	NewTxnRequest(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*GenericResp, error)
 }
 
-type fastChainClient struct {
+type pbftClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewFastChainClient(cc *grpc.ClientConn) FastChainClient {
-	return &fastChainClient{cc}
+func NewPbftClient(cc *grpc.ClientConn) PbftClient {
+	return &pbftClient{cc}
 }
 
-func (c *fastChainClient) CheckLeader(ctx context.Context, in *CheckLeaderReq, opts ...grpc.CallOption) (*CheckLeaderResp, error) {
+func (c *pbftClient) CheckLeader(ctx context.Context, in *CheckLeaderReq, opts ...grpc.CallOption) (*CheckLeaderResp, error) {
 	out := new(CheckLeaderResp)
-	err := c.cc.Invoke(ctx, "/fastchain.FastChain/CheckLeader", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/fastchain.Pbft/CheckLeader", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// FastChainServer is the server API for FastChain service.
-type FastChainServer interface {
+func (c *pbftClient) NewTxnRequest(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*GenericResp, error) {
+	out := new(GenericResp)
+	err := c.cc.Invoke(ctx, "/fastchain.Pbft/NewTxnRequest", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// PbftServer is the server API for Pbft service.
+type PbftServer interface {
 	// RPC service that responds whether the node is the leader
 	CheckLeader(context.Context, *CheckLeaderReq) (*CheckLeaderResp, error)
+	// Send new transaction to presumed leader node
+	NewTxnRequest(context.Context, *Transaction) (*GenericResp, error)
 }
 
-func RegisterFastChainServer(s *grpc.Server, srv FastChainServer) {
-	s.RegisterService(&_FastChain_serviceDesc, srv)
+func RegisterPbftServer(s *grpc.Server, srv PbftServer) {
+	s.RegisterService(&_Pbft_serviceDesc, srv)
 }
 
-func _FastChain_CheckLeader_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Pbft_CheckLeader_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CheckLeaderReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FastChainServer).CheckLeader(ctx, in)
+		return srv.(PbftServer).CheckLeader(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/fastchain.FastChain/CheckLeader",
+		FullMethod: "/fastchain.Pbft/CheckLeader",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FastChainServer).CheckLeader(ctx, req.(*CheckLeaderReq))
+		return srv.(PbftServer).CheckLeader(ctx, req.(*CheckLeaderReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-var _FastChain_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "fastchain.FastChain",
-	HandlerType: (*FastChainServer)(nil),
+func _Pbft_NewTxnRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Transaction)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PbftServer).NewTxnRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/fastchain.Pbft/NewTxnRequest",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PbftServer).NewTxnRequest(ctx, req.(*Transaction))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Pbft_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "fastchain.Pbft",
+	HandlerType: (*PbftServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "CheckLeader",
-			Handler:    _FastChain_CheckLeader_Handler,
+			Handler:    _Pbft_CheckLeader_Handler,
+		},
+		{
+			MethodName: "NewTxnRequest",
+			Handler:    _Pbft_NewTxnRequest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "fastchain.proto",
 }
 
-func init() { proto.RegisterFile("fastchain.proto", fileDescriptor_fastchain_ec67cbc80a8b82c2) }
+func init() { proto.RegisterFile("fastchain.proto", fileDescriptor_fastchain_fbe2eb567c474fc6) }
 
-var fileDescriptor_fastchain_ec67cbc80a8b82c2 = []byte{
-	// 129 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x4f, 0x4b, 0x2c, 0x2e,
-	0x49, 0xce, 0x48, 0xcc, 0xcc, 0xd3, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x84, 0x0b, 0x28,
-	0x09, 0x70, 0xf1, 0x39, 0x67, 0xa4, 0x26, 0x67, 0xfb, 0xa4, 0x26, 0xa6, 0xa4, 0x16, 0x05, 0xa5,
-	0x16, 0x2a, 0x69, 0x73, 0xf1, 0xa3, 0x88, 0x14, 0x17, 0x08, 0x49, 0x70, 0xb1, 0xe7, 0xa6, 0x16,
-	0x17, 0x27, 0xa6, 0xa7, 0x4a, 0x30, 0x2a, 0x30, 0x6a, 0x70, 0x04, 0xc1, 0xb8, 0x46, 0xc1, 0x5c,
-	0x9c, 0x6e, 0x89, 0xc5, 0x25, 0xce, 0x20, 0xb3, 0x84, 0xdc, 0xb8, 0xb8, 0x91, 0x74, 0x0a, 0x49,
-	0xea, 0x21, 0xec, 0x45, 0xb5, 0x43, 0x4a, 0x0a, 0x97, 0x54, 0x71, 0x81, 0x12, 0x43, 0x12, 0x1b,
-	0xd8, 0x95, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0x1a, 0x96, 0x7a, 0x46, 0xb8, 0x00, 0x00,
-	0x00,
+var fileDescriptor_fastchain_fbe2eb567c474fc6 = []byte{
+	// 527 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x53, 0x41, 0x6f, 0xd3, 0x30,
+	0x14, 0x5e, 0x96, 0xb4, 0x6b, 0x5e, 0x0b, 0x9d, 0x0c, 0x1a, 0xa6, 0x42, 0xa2, 0xf2, 0x01, 0x15,
+	0x26, 0xed, 0x10, 0xc4, 0x85, 0x5b, 0x01, 0xd1, 0x1d, 0xa6, 0xaa, 0xf2, 0xca, 0xee, 0x6e, 0xe2,
+	0xb5, 0x56, 0x17, 0x27, 0x8b, 0x5d, 0xe8, 0xae, 0xfc, 0x03, 0x7e, 0x28, 0xff, 0x01, 0xf9, 0x25,
+	0x69, 0xd3, 0x89, 0xdd, 0xde, 0xf7, 0xf9, 0xf9, 0x7d, 0xdf, 0xf3, 0xf3, 0x83, 0xfe, 0xad, 0x30,
+	0x36, 0x5e, 0x09, 0xa5, 0x2f, 0xf2, 0x22, 0xb3, 0x19, 0x09, 0x77, 0x04, 0x3b, 0x85, 0xe7, 0x5f,
+	0x57, 0x32, 0x5e, 0x5f, 0x49, 0x91, 0xc8, 0x82, 0xcb, 0x7b, 0x76, 0x0e, 0xfd, 0x03, 0xc6, 0xe4,
+	0x84, 0xc2, 0x49, 0x2a, 0x8d, 0x11, 0x4b, 0x49, 0xbd, 0xa1, 0x37, 0xea, 0xf0, 0x1a, 0xb2, 0x19,
+	0x74, 0x66, 0x8b, 0x5b, 0x3b, 0xcd, 0x12, 0x49, 0x08, 0x04, 0x22, 0x49, 0x0a, 0x4c, 0x09, 0x39,
+	0xc6, 0xe4, 0x0c, 0xda, 0xf9, 0x66, 0xb1, 0x96, 0x0f, 0xf4, 0x18, 0xd9, 0x0a, 0xb9, 0x8a, 0x79,
+	0xa1, 0x7e, 0xba, 0x03, 0x1f, 0x0f, 0x6a, 0xc8, 0x22, 0x68, 0xb9, 0x6a, 0x86, 0xbc, 0x87, 0x96,
+	0x76, 0x01, 0xf5, 0x86, 0xfe, 0xa8, 0x1b, 0xbd, 0xb8, 0xd8, 0x77, 0x51, 0x4b, 0xf2, 0x32, 0x83,
+	0x19, 0xe8, 0x3b, 0xea, 0xcb, 0x5d, 0x16, 0xaf, 0x2f, 0xd1, 0xb6, 0x13, 0x9e, 0x6e, 0xd2, 0x85,
+	0x2c, 0xed, 0xf8, 0xbc, 0x42, 0x64, 0x00, 0x9d, 0x89, 0x30, 0x57, 0x2a, 0x55, 0x16, 0x2d, 0xf9,
+	0x7c, 0x87, 0x9d, 0xa9, 0x89, 0x30, 0x3f, 0x8c, 0x4c, 0xd0, 0x94, 0xcf, 0x6b, 0xe8, 0x5a, 0x9b,
+	0xab, 0x54, 0xd2, 0x00, 0x69, 0x8c, 0xd9, 0x5f, 0x0f, 0x4e, 0xe6, 0x5b, 0xfd, 0x4d, 0x58, 0x41,
+	0x18, 0xf4, 0xc6, 0x71, 0x9c, 0x6d, 0xb4, 0x9d, 0x66, 0x3a, 0x2e, 0x5f, 0x29, 0xe0, 0x07, 0x1c,
+	0x79, 0x09, 0xad, 0x59, 0xa1, 0x62, 0x59, 0xc9, 0x96, 0xe0, 0xc0, 0x8f, 0xff, 0xc8, 0xcf, 0x1b,
+	0x08, 0xb9, 0x8c, 0x55, 0xae, 0xa4, 0xb6, 0x28, 0xdd, 0xe3, 0x7b, 0xc2, 0x75, 0x38, 0x4e, 0x5d,
+	0x79, 0xda, 0x2a, 0x3b, 0x2c, 0x91, 0xeb, 0x62, 0x26, 0x1e, 0xee, 0x32, 0x91, 0xd0, 0x36, 0xde,
+	0xa9, 0x21, 0xe9, 0x81, 0x77, 0x43, 0x4f, 0x30, 0xd9, 0xbb, 0x71, 0x88, 0xd3, 0x4e, 0x89, 0xb8,
+	0x43, 0xd7, 0x34, 0x2c, 0xd1, 0xb5, 0xeb, 0xf7, 0x52, 0x98, 0x15, 0x05, 0x2c, 0x80, 0x31, 0xfb,
+	0x04, 0xdd, 0x79, 0x21, 0xb4, 0x11, 0xb1, 0x55, 0x99, 0x26, 0xef, 0x20, 0x48, 0x84, 0x15, 0xd8,
+	0x6a, 0x37, 0x22, 0x8d, 0xe9, 0x54, 0x8f, 0xc2, 0xf1, 0x9c, 0x7d, 0x86, 0x5e, 0xe3, 0x9a, 0x21,
+	0x1f, 0x20, 0xb0, 0x5b, 0x5d, 0x4f, 0xf5, 0xac, 0x79, 0x6f, 0x9f, 0xc6, 0x31, 0x87, 0xfd, 0xf6,
+	0x20, 0xdc, 0x0d, 0x96, 0x44, 0xd0, 0x5e, 0xe1, 0x70, 0x2b, 0xcd, 0xc1, 0xa3, 0x1f, 0xd1, 0x18,
+	0x3f, 0xaf, 0x32, 0xc9, 0x79, 0xa5, 0x76, 0x8c, 0x37, 0x5e, 0xfd, 0x5f, 0xcd, 0x94, 0x72, 0x6e,
+	0x42, 0x46, 0x2d, 0xb5, 0xa1, 0xfe, 0xd0, 0x1f, 0x85, 0xbc, 0x04, 0xec, 0x2d, 0x74, 0x27, 0x52,
+	0xcb, 0x42, 0xc5, 0xb8, 0x0b, 0xa7, 0xe0, 0xa7, 0x66, 0x59, 0x7d, 0x72, 0x17, 0x46, 0x7f, 0x3c,
+	0x08, 0x9c, 0x3e, 0xf9, 0x0e, 0xdd, 0xc6, 0xe6, 0x90, 0xd7, 0x0d, 0xb5, 0xc3, 0x1d, 0x1b, 0x0c,
+	0x9e, 0x3a, 0x32, 0x39, 0x3b, 0x22, 0x63, 0x78, 0x36, 0x95, 0xbf, 0xe6, 0x5b, 0xcd, 0xe5, 0xfd,
+	0x46, 0x1a, 0x4b, 0x9e, 0x78, 0xa5, 0x41, 0x93, 0x6f, 0x78, 0x64, 0x47, 0x8b, 0x36, 0x2e, 0xfa,
+	0xc7, 0x7f, 0x01, 0x00, 0x00, 0xff, 0xff, 0x0d, 0xc5, 0x76, 0xb6, 0xfb, 0x03, 0x00, 0x00,
 }
