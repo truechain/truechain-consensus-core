@@ -3,10 +3,17 @@ set -x
 
 export GOOS=$1
 export GOARCH=amd64
+export PROJECTPATH="$GOPATH/src/github.com/truechain/truechain-consensus-core/pbft"
+
+chdir $PROJECTPATH
 
 git_commit_hash() {
     echo $(git rev-parse --short HEAD)
 }
+
+protoc -I src/pbft-core/fastchain/ \
+          src/pbft-core/fastchain/fastchain.proto \
+          --go_out=plugins=grpc:src/pbft-core/fastchain/
 
 export GOPATH=$GOPATH:`pwd`:`pwd`/..
 
