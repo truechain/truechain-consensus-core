@@ -44,7 +44,7 @@ const (
 	typePrepare    = iota
 	typeCommit     = iota
 	typeInit       = iota
-	typeRequest    = iota
+	TypeRequest    = iota
 	typeViewChange = iota
 	typeNewView    = iota
 	typeCheckpoint = iota
@@ -80,7 +80,7 @@ func FromGOB64(str string) []byte {
 	return m
 }
 
-func getHash(plaintext string) string {
+func GetHash(plaintext string) string {
 	hasher := sha512.New()
 	hasher.Write([]byte(plaintext))
 	return hex.EncodeToString(hasher.Sum(nil))
@@ -284,7 +284,7 @@ func (req *Request) addSig(privKey *ecdsa.PrivateKey) {
 		return
 	}
 
-	s := getHash(string(b.Bytes()))
+	s := GetHash(string(b.Bytes()))
 	MyPrint(1, "digest %s.\n", string(s))
 	req.Dig = DigType(s)
 	if privKey != nil {
@@ -307,7 +307,7 @@ func (req *Request) verifyDig() bool {
 		return false
 	}
 
-	s := getHash(string(b.Bytes()))
+	s := GetHash(string(b.Bytes()))
 	return s == string(req.Dig)
 }
 
@@ -408,7 +408,7 @@ func (nd *Node) broadcast(req Request) {
 		}
 		nd.broadcastByRPC("Node.ProxyProcessPrePrepare", arg, &reply)
 		break
-	case typeRequest:
+	case TypeRequest:
 		arg := ProxyNewClientRequestArg{req, req.Inner.ID}
 		reply := make([]interface{}, nd.N)
 		for k := 0; k < nd.N; k++ {
@@ -472,7 +472,7 @@ func (nd *Node) ProxyProcessPrePrepare(arg ProxyProcessPrePrepareArg, reply *Pro
 // ProxyNewClientRequest receives request for transaction from Client.
 func (nd *Node) ProxyNewClientRequest(arg ProxyNewClientRequestArg, reply *ProxyNewClientRequestReply) error {
 	MyPrint(2, "New Client Request called.\n")
-	nd.newClientRequest(arg.Req, arg.ClientID) // we don't have return value here
+	nd.NewClientRequest(arg.Req, arg.ClientID) // we don't have return value here
 	return nil
 }
 
@@ -652,7 +652,7 @@ func (nd *Node) handleTimeout(dig DigType, view int) {
 	nd.processViewChange(viewChange, 0)
 }
 
-func (nd *Node) newClientRequest(req Request, clientID int) { // TODO: change to single arg and single reply
+func (nd *Node) NewClientRequest(req Request, clientID int) { // TODO: change to single arg and single reply
 	if v, ok := nd.active[req.Dig]; ok {
 		if v.req == nil {
 			nd.mu.Lock()
@@ -1159,7 +1159,7 @@ func (nd *Node) setupConnections() {
 
 // Make registers all node config objects,
 func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequests int) *Node {
-	/*gob.Register(&ApplyMsg{})
+	gob.Register(&ApplyMsg{})
 	gob.Register(&RequestInner{})
 	gob.Register(&Request{})
 	gob.Register(&checkpointProofType{})
@@ -1176,7 +1176,7 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequ
 	gob.Register(&ProxyProcessPrepareArg{})
 	gob.Register(&ProxyProcessPrepareReply{})
 	gob.Register(&ProxyProcessViewChangeArg{})
-	gob.Register(&ProxyProcessViewChangeReply{})*/
+	gob.Register(&ProxyProcessViewChangeReply{})
 
 	nd := &Node{}
 	//rpc.Register(nd)
@@ -1218,7 +1218,7 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequ
 	nd.cfg.LD = path.Join(GetCWD(), "logs/")
 	// kfpath := path.Join(cfg.KD, filename)
 
-	/*MakeDirIfNot(nd.cfg.LD) //handles 'already exists'
+	MakeDirIfNot(nd.cfg.LD) //handles 'already exists'
 	fi, err := os.Create(path.Join(nd.cfg.LD, "PBFTLog"+strconv.Itoa(nd.ID)+".txt"))
 	if err == nil {
 		nd.outputLog = fi
@@ -1239,6 +1239,6 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequ
 	nd.waiting = make(map[int]Request)
 	go nd.setupConnections()
 
-	go nd.serverLoop()*/
+	go nd.serverLoop()
 	return nd
 }

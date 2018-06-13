@@ -5,7 +5,7 @@ export GOOS=$1
 export GOARCH=amd64
 export PROJECTPATH="$GOPATH/src/github.com/truechain/truechain-consensus-core/pbft"
 
-chdir $PROJECTPATH
+cd $PROJECTPATH
 
 git_commit_hash() {
     echo $(git rev-parse --short HEAD)
@@ -25,10 +25,6 @@ if [ "$GOOS" -eq "linux" ]; then
 fi
 
 LDFLAGS="-s -w -X common.GitCommitHash=$(git_commit_hash)"
-
-go build -o "$OUTDIR"/pbft-server \
-    -ldflags "$LDFLAGS" \
-    ./src/pbft-core/pbft-server/
 
 go build -o "$OUTDIR"/pbft-client \
     -ldflags "$LDFLAGS" \

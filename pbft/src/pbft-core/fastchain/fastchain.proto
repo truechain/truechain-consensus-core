@@ -3,12 +3,32 @@ syntax = "proto3";
 package fastchain;
 
 //Interface exposed by pbft committee nodes
-service Pbft {
+service FastChain {
         //RPC service that responds whether the node is the leader
         rpc CheckLeader (CheckLeaderReq) returns (CheckLeaderResp) {}
         
         //Send new transaction to presumed leader node
-        rpc NewTxnRequest (Transaction) returns (GenericResp) {}
+        rpc NewTxnRequest (Request) returns (GenericResp) {}
+}
+
+message Request {
+    message Inner {
+        int32 id        = 1;
+        int32 seq       = 2;
+        int32 view      = 3;
+        int32 type      = 4;
+        bytes msg       = 5;
+        int64 timestamp = 6;
+    }
+    message MsgSignature {
+            int64 r = 1;
+            int64 s = 2;
+    }
+
+    Inner inner         = 1;
+    bytes dig           = 2;
+    MsgSignature sig    = 3;
+    bytes outer         = 4;
 }
 
 message CheckLeaderReq {}

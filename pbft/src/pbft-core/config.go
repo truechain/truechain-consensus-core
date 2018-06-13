@@ -28,6 +28,7 @@ const OutputThreshold = 0
 
 // BasePort is used as base value of ports defined for initializng PBFT servers
 const BasePort = 40540
+const GrpcBasePort = 10000
 
 // Config is a generic struct used by each node to interact with connection pool details
 type Config struct {
@@ -36,6 +37,7 @@ type Config struct {
 	LD        string   // log directory
 	IPList    []string // stores list of IP addresses belonging to BFT nodes
 	Ports     []int    // stores list of Ports belonging to BFT nodes
+	GrpcPorts []int    // stores list of ports serving grpc requests
 	HostsFile string   // network config file, to read IP addresses from
 	NumQuest  int      // NumQuest is the number of requests sent from client
 	NumKeys   int      // NumKeys is the count of IP addresses (BFT nodes) participating
