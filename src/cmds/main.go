@@ -28,7 +28,13 @@ import (
 func main() {
 
 	cfg := pbft.Config{}
-	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts") // TODO: read from config.yaml in future.
+	hostsfile, err := pbft.LoadConfig()
+	pbft.CheckErr(err)
+	if hostsfile != nil {
+		cfg.HostsFile = hostsfile.Section("path").Key("path_to_hosts").String()
+	} else {
+		cfg.HostsFile = path.Join(os.Getenv("PWD"), "hosts") // TODO: read from config.yaml in future.
+	}
 	cfg.IPList, cfg.Ports = pbft.GetIPConfigs(cfg.HostsFile)
 	fmt.Printf("Get IPList %v, Ports %v\n", cfg.IPList, cfg.Ports)
 	cfg.NumKeys = len(cfg.IPList)

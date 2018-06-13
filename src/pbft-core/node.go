@@ -1215,7 +1215,14 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequ
 	nd.nodeMessageLog.content = make(map[int](map[int](map[int]Request)))
 	nd.prepared = make(map[int]Request)
 	MyPrint(2, "Initial Config %v\n", nd)
-	nd.cfg.LD = path.Join(GetCWD(), "logs/")
+	cfgData, err := LoadConfig()
+	CheckErr(err)
+	if cfgData != nil {
+
+		nd.cfg.LD = cfgData.Section("log").Key("log_folder").String()
+	} else {
+		nd.cfg.LD = path.Join(GetCWD(), "logs/")
+	}
 	// kfpath := path.Join(cfg.KD, filename)
 
 	MakeDirIfNot(nd.cfg.LD) //handles 'already exists'

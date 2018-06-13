@@ -17,7 +17,10 @@ limitations under the License.
 package pbft
 
 import (
-	"path"
+	"fmt"
+	"github.com/go-ini/ini"
+	path2 "path"
+	"os"
 )
 
 // MaxFail defines the number of faults to be tolerated
@@ -41,10 +44,26 @@ type Config struct {
 	NumKeys   int      // NumKeys is the count of IP addresses (BFT nodes) participating
 }
 
+// LoadConfig ini file
+func LoadConfig() (configData *ini.File, err error) {
+	path := path2.Join(os.Getenv("PWD"), "cfg.ini")
+	configData, err = ini.Load(path)
+	if err != nil {
+		fmt.Printf("Error reading ini file: %v", err)
+	}
+	return configData, nil
+}
+
 // GenerateKeysToFile generates ECDSA public-private keypairs to a folder
 func (cfg *Config) GenerateKeysToFile(numKeys int) {
+	cfgData, err := LoadConfig()
+	CheckErr(err)
+	if cfgData != nil {
+		cfg.KD = cfgData.Section("general").Key("pem_path").String()
+	} else {
+		cfg.KD = path2.Join(GetCWD(), "keys/")
+	}
 	// IdCount := 1000
-	cfg.KD = path.Join(GetCWD(), "keys/")
 	MakeDirIfNot(cfg.KD)
 	WriteNewKeys(numKeys, cfg.KD)
 	MyPrint(1, "Generated %d keypairs in %s folder..\n", numKeys, cfg.KD)
