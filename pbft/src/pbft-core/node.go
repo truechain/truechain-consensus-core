@@ -164,13 +164,12 @@ type keyItem *ecdsa.PublicKey
 
 // Node contains base properties of a Node
 type Node struct {
-	cfg         Config
-	mu          sync.Mutex
-	clientMu    sync.Mutex
-	peers       []*rpc.Client
-	port        int
-	maxRequests int
-	killFlag    bool
+	cfg      Config
+	mu       sync.Mutex
+	clientMu sync.Mutex
+	peers    []*rpc.Client
+	port     int
+	killFlag bool
 
 	ListenReady chan bool
 	SetupReady  chan bool
@@ -575,6 +574,8 @@ func (nd *Node) serverLoop() {
 	MyPrint(1, "[%d] Entering server loop.\n", nd.ID)
 
 	server := rpc.NewServer()
+	// TODO: gives out the error:
+	// rpc.Register: reply type of method "NewClientRequest" is not a pointer: "int"
 	server.Register(nd)
 
 	l, e := net.Listen("tcp", ":"+strconv.Itoa(nd.port))
@@ -1162,7 +1163,7 @@ func (nd *Node) setupConnections() {
 }
 
 // Make registers all node config objects,
-func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequests int) *Node {
+func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg) *Node {
 	gob.Register(&ApplyMsg{})
 	gob.Register(&RequestInner{})
 	gob.Register(&Request{})
@@ -1208,7 +1209,6 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequ
 	nd.vmin = 0
 	nd.vmax = 0
 	nd.waiting = nil
-	nd.maxRequests = maxRequests
 	nd.killFlag = false
 	nd.ID = me
 	nd.active = make(map[DigType]ActiveItem)

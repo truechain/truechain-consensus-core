@@ -26,11 +26,11 @@ import (
 	"path"
 	"time"
 
-	"pbft-core"
 	pb "pbft-core/fastchain"
 
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"google.golang.org/grpc"
+	"pbft-core"
 )
 
 // PbftServer defines the base properties of a pbft node server
@@ -145,7 +145,7 @@ func BuildServer(cfg pbft.Config, IP string, port int, grpcPort int, me int) *Pb
 	sv.TxnPool = make(chan pb.Transaction)
 
 	applyChan := make(chan pbft.ApplyMsg, cfg.NumQuest)
-	sv.Nd = pbft.Make(cfg, me, port, 0, applyChan, 100) // test 100 messages
+	sv.Nd = pbft.Make(cfg, me, port, 0, applyChan)
 
 	RegisterPbftGrpcListener(grpcPort, sv)
 
