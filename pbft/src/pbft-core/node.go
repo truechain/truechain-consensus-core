@@ -80,6 +80,7 @@ func FromGOB64(str string) []byte {
 	return m
 }
 
+// GetHash generates sha512 hash for a string
 func GetHash(plaintext string) string {
 	hasher := sha512.New()
 	hasher.Write([]byte(plaintext))
@@ -652,6 +653,7 @@ func (nd *Node) handleTimeout(dig DigType, view int) {
 	nd.processViewChange(viewChange, 0)
 }
 
+// NewClientRequest handles transaction request from client and broadcasts it to other PBFT nodes from primary replica
 func (nd *Node) NewClientRequest(req Request, clientID int) { // TODO: change to single arg and single reply
 	if v, ok := nd.active[req.Dig]; ok {
 		if v.req == nil {

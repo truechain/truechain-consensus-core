@@ -28,6 +28,8 @@ const OutputThreshold = 0
 
 // BasePort is used as base value of ports defined for initializng PBFT servers
 const BasePort = 40540
+
+//GrpcBasePort is used as base value of ports defined for grpc communication between PBFT servers and clients
 const GrpcBasePort = 10000
 
 // Config is a generic struct used by each node to interact with connection pool details

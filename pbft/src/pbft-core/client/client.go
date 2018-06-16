@@ -36,10 +36,6 @@ import (
 	pb "pbft-core/fastchain"
 )
 
-const (
-	port = 10000
-)
-
 var (
 	cfg    = pbft.Config{}
 	svList []*pbftserver.PbftServer
@@ -63,7 +59,18 @@ func (cl *Client) Start() {
 
 }
 
-func (cl *Client) LoadConfig() {
+// LoadPbftSimConfig loads configuration for running PBFT simulation
+func LoadPbftSimConfig() {
+	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts") // TODO: read from config.yaml in future.
+	cfg.IPList, cfg.Ports, cfg.GrpcPorts = pbft.GetIPConfigs(cfg.HostsFile)
+	cfg.NumKeys = len(cfg.IPList)
+	cfg.N = cfg.NumKeys - 1 // we assume client count to be 1
+	cfg.NumQuest = 100
+	cfg.GenerateKeysToFile(cfg.NumKeys)
+}
+
+// LoadPbftClientConfig loads client configuration
+func (cl *Client) LoadPbftClientConfig() {
 	cl.IP = cfg.IPList[cfg.N]
 	cl.Port = cfg.Ports[cfg.N]
 	cl.Me = 0
@@ -146,15 +153,7 @@ func (cl *Client) NewRequest(msg string, timeStamp int64) {
 	}
 }
 
-func LoadPbftSimConfig() {
-	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts") // TODO: read from config.yaml in future.
-	cfg.IPList, cfg.Ports, cfg.GrpcPorts = pbft.GetIPConfigs(cfg.HostsFile)
-	cfg.NumKeys = len(cfg.IPList)
-	cfg.N = cfg.NumKeys - 1 // we assume client count to be 1
-	cfg.NumQuest = 100
-	cfg.GenerateKeysToFile(cfg.NumKeys)
-}
-
+// StartPbftServers starts PBFT servers from config information
 func StartPbftServers() {
 	svList = make([]*pbftserver.PbftServer, cfg.N)
 	for i := 0; i < cfg.N; i++ {
@@ -179,7 +178,7 @@ func main() {
 	LoadPbftSimConfig()
 	StartPbftServers()
 	cl := &Client{}
-	cl.LoadConfig()
+	cl.LoadPbftClientConfig()
 
 	go cl.Start() // in case client has some initial logic
 

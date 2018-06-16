@@ -30,11 +30,7 @@ import (
 	pb "pbft-core/fastchain"
 )
 
-const (
-	port = 10000
-)
-
-// pbftserver defines the base properties of a pbft node server
+// PbftServer defines the base properties of a pbft node server
 type PbftServer struct {
 	IP   string
 	Port int
@@ -53,6 +49,7 @@ func (sv *PbftServer) Start() {
 	pbft.MyPrint(1, "Firing up peer server...\n")
 }
 
+// CheckLeader lets client know of its prime replica status
 func (sv *fastChainServer) CheckLeader(context.Context, *pb.CheckLeaderReq) (*pb.CheckLeaderResp, error) {
 	return &pb.CheckLeaderResp{Message: sv.pbftSv.Nd.Primary == sv.pbftSv.Nd.ID}, nil
 }
@@ -63,6 +60,7 @@ func verifyTxnReq(req *pb.Request) error {
 	return nil
 }
 
+// createInternalPbftReq wraps a transaction request from client for internal rpc communication between pbft nodes
 func createInternalPbftReq(txnReq *pb.Request) pbft.Request {
 	req := pbft.Request{}
 	reqInner := pbft.RequestInner{}
@@ -85,6 +83,7 @@ func createInternalPbftReq(txnReq *pb.Request) pbft.Request {
 	return req
 }
 
+// NewTxnRequest handles transaction rquests from clients
 func (sv *fastChainServer) NewTxnRequest(ctx context.Context, txnReq *pb.Request) (*pb.GenericResp, error) {
 	_ = verifyTxnReq(txnReq)
 
