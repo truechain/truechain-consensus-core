@@ -9,12 +9,12 @@
 .idea
 
 # installed platform-specific binaries
-/bin
+bin/
 .DS_Store
 .project
 .hmake
-/src/vendor/*
-!src/vendor/manifest
+vendor/
+!vendor/manifest
 
 ## golang dlv / build
 engine
