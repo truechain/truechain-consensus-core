@@ -23,7 +23,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
-	"os"
 	"path"
 	"strconv"
 	"time"
@@ -49,7 +48,6 @@ type Client struct {
 	Port    int
 	Index   int
 	Me      int
-	Cfg     *pbft.Config
 	privKey *ecdsa.PrivateKey
 }
 
@@ -59,22 +57,11 @@ func (cl *Client) Start() {
 
 }
 
-// LoadPbftSimConfig loads configuration for running PBFT simulation
-func LoadPbftSimConfig() {
-	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts") // TODO: read from config.yaml in future.
-	cfg.IPList, cfg.Ports, cfg.GrpcPorts = pbft.GetIPConfigs(cfg.HostsFile)
-	cfg.NumKeys = len(cfg.IPList)
-	cfg.N = cfg.NumKeys - 1 // we assume client count to be 1
-	cfg.NumQuest = 100
-	cfg.GenerateKeysToFile(cfg.NumKeys)
-}
-
 // LoadPbftClientConfig loads client configuration
 func (cl *Client) LoadPbftClientConfig() {
 	cl.IP = cfg.IPList[cfg.N]
 	cl.Port = cfg.Ports[cfg.N]
 	cl.Me = 0
-	cl.Cfg = &cfg
 
 	pemkeyFile := fmt.Sprintf("sign%v.pem", cfg.N)
 	sk := pbft.FetchPrivateKey(path.Join(cfg.KD, pemkeyFile))
@@ -153,30 +140,8 @@ func (cl *Client) NewRequest(msg string, timeStamp int64) {
 	}
 }
 
-// StartPbftServers starts PBFT servers from config information
-func StartPbftServers() {
-	svList = make([]*pbftserver.PbftServer, cfg.N)
-	for i := 0; i < cfg.N; i++ {
-		fmt.Println(cfg.IPList[i], cfg.Ports[i], i)
-		svList[i] = pbftserver.BuildServer(cfg, cfg.IPList[i], cfg.Ports[i], cfg.GrpcPorts[i], i)
-	}
-
-	for i := 0; i < cfg.N; i++ {
-		<-svList[i].Nd.ListenReady
-	}
-
-	time.Sleep(1 * time.Second) // wait for the servers to accept incoming connections
-	for i := 0; i < cfg.N; i++ {
-		svList[i].Nd.SetupReady <- true // make them to dial each other's RPCs
-	}
-
-	//fmt.Println("[!!!] Please allow the program to accept incoming connections if you are using Mac OS.")
-	time.Sleep(1 * time.Second) // wait for the servers to accept incoming connections
-}
-
 func main() {
-	LoadPbftSimConfig()
-	StartPbftServers()
+	cfg.LoadPbftSimConfig()
 	cl := &Client{}
 	cl.LoadPbftClientConfig()
 
@@ -188,9 +153,8 @@ func main() {
 	}
 
 	fmt.Println("Finish sending the requests.")
-	elapsed := time.Since(start)
 
-	finish := make(chan bool)
+	/*finish := make(chan bool)
 	for i := 0; i < cfg.N; i++ {
 		go func(ind int) {
 			for {
@@ -203,6 +167,7 @@ func main() {
 
 		}(i)
 	}
-	<-finish
+	<-finish*/
+	elapsed := time.Since(start)
 	fmt.Println("Test finished. Time cost:", elapsed)
 }

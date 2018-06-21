@@ -17,6 +17,7 @@ limitations under the License.
 package pbft
 
 import (
+	"os"
 	"path"
 )
 
@@ -52,4 +53,14 @@ func (cfg *Config) GenerateKeysToFile(numKeys int) {
 	MakeDirIfNot(cfg.KD)
 	WriteNewKeys(numKeys, cfg.KD)
 	MyPrint(1, "Generated %d keypairs in %s folder..\n", numKeys, cfg.KD)
+}
+
+// LoadPbftSimConfig loads configuration for running PBFT simulation
+func (cfg *Config) LoadPbftSimConfig() {
+	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts") // TODO: read from config.yaml in future.
+	cfg.IPList, cfg.Ports, cfg.GrpcPorts = GetIPConfigs(cfg.HostsFile)
+	cfg.NumKeys = len(cfg.IPList)
+	cfg.N = cfg.NumKeys - 1 // we assume client count to be 1
+	cfg.NumQuest = 100
+	cfg.GenerateKeysToFile(cfg.NumKeys)
 }

@@ -30,3 +30,6 @@ go build -o "$OUTDIR"/pbft-client \
     -ldflags "$LDFLAGS" \
     ./src/pbft-core/client/
 
+go build -o "$OUTDIR"/truechain-engine \
+    -ldflags "$LDFLAGS" \
+    ./src/pbft-core/pbft-sim-engine/
