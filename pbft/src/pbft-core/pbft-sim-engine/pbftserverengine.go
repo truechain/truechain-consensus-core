@@ -19,44 +19,55 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
-	"pbft-core"
-	"strconv"
+	"os/signal"
 	"time"
+
+	"pbft-core"
+	"pbft-core/pbft-server"
+
+	"golang.org/x/sys/unix"
 )
 
-func main() {
+var (
+	cfg    = pbft.Config{}
+	svList []*pbftserver.PbftServer
+)
 
-	cfg := pbft.Config{}
+// LoadPbftSimConfig loads configuration for running PBFT simulation
+/*func LoadPbftSimConfig() {
 	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts") // TODO: read from config.yaml in future.
-	cfg.IPList, cfg.Ports = pbft.GetIPConfigs(cfg.HostsFile)
-	fmt.Printf("Get IPList %v, Ports %v\n", cfg.IPList, cfg.Ports)
+	cfg.IPList, cfg.Ports, cfg.GrpcPorts = pbft.GetIPConfigs(cfg.HostsFile)
 	cfg.NumKeys = len(cfg.IPList)
 	cfg.N = cfg.NumKeys - 1 // we assume client count to be 1
 	cfg.NumQuest = 100
 	cfg.GenerateKeysToFile(cfg.NumKeys)
+}*/
 
-	svList := make([]*pbft.Server, cfg.N)
+// StartPbftServers starts PBFT servers from config information
+func StartPbftServers() {
+	svList = make([]*pbftserver.PbftServer, cfg.N)
 	for i := 0; i < cfg.N; i++ {
 		fmt.Println(cfg.IPList[i], cfg.Ports[i], i)
-		svList[i] = pbft.BuildServer(cfg, cfg.IPList[i], cfg.Ports[i], i)
+		svList[i] = pbftserver.BuildServer(cfg, cfg.IPList[i], cfg.Ports[i], cfg.GrpcPorts[i], i)
 	}
+
 	for i := 0; i < cfg.N; i++ {
 		<-svList[i].Nd.ListenReady
 	}
+
 	time.Sleep(1 * time.Second) // wait for the servers to accept incoming connections
 	for i := 0; i < cfg.N; i++ {
 		svList[i].Nd.SetupReady <- true // make them to dial each other's RPCs
 	}
-	fmt.Println("[!!!] Please allow the program to accept incoming connections if you are using Mac OS.")
-	time.Sleep(1 * time.Second) // wait for the servers to accept incoming connections
 
-	cl := pbft.BuildClient(cfg, cfg.IPList[cfg.N], cfg.Ports[cfg.N], 0)
-	start := time.Now()
-	for k := 0; k < cfg.NumQuest; k++ {
-		cl.NewRequest("Request "+strconv.Itoa(k), int64(k)) // A random string Request{1,2,3,4....} and fake timestamp k
-	}
-	fmt.Println("Finish sending the requests.")
+	//fmt.Println("[!!!] Please allow the program to accept incoming connections if you are using Mac OS.")
+	time.Sleep(1 * time.Second) // wait for the servers to accept incoming connections
+}
+
+func main() {
+	cfg.LoadPbftSimConfig()
+	StartPbftServers()
+
 	finish := make(chan bool)
 	for i := 0; i < cfg.N; i++ {
 		go func(ind int) {
@@ -71,6 +82,18 @@ func main() {
 		}(i)
 	}
 	<-finish
-	elapsed := time.Since(start)
-	fmt.Println("Test finished. Time cost:", elapsed)
+
+	// Use the main goroutine as signal handling loop
+	sigCh := make(chan os.Signal)
+	signal.Notify(sigCh)
+	for s := range sigCh {
+		switch s {
+		case unix.SIGTERM:
+			fallthrough
+		case unix.SIGINT:
+			return
+		default:
+			continue
+		}
+	}
 }

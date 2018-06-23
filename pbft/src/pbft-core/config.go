@@ -17,6 +17,7 @@ limitations under the License.
 package pbft
 
 import (
+	"os"
 	"path"
 )
 
@@ -29,6 +30,9 @@ const OutputThreshold = 0
 // BasePort is used as base value of ports defined for initializng PBFT servers
 const BasePort = 40540
 
+//GrpcBasePort is used as base value of ports defined for grpc communication between PBFT servers and clients
+const GrpcBasePort = 10000
+
 // Config is a generic struct used by each node to interact with connection pool details
 type Config struct {
 	N         int      // number of nodes to be launchedt
@@ -36,6 +40,7 @@ type Config struct {
 	LD        string   // log directory
 	IPList    []string // stores list of IP addresses belonging to BFT nodes
 	Ports     []int    // stores list of Ports belonging to BFT nodes
+	GrpcPorts []int    // stores list of ports serving grpc requests
 	HostsFile string   // network config file, to read IP addresses from
 	NumQuest  int      // NumQuest is the number of requests sent from client
 	NumKeys   int      // NumKeys is the count of IP addresses (BFT nodes) participating
@@ -48,4 +53,14 @@ func (cfg *Config) GenerateKeysToFile(numKeys int) {
 	MakeDirIfNot(cfg.KD)
 	WriteNewKeys(numKeys, cfg.KD)
 	MyPrint(1, "Generated %d keypairs in %s folder..\n", numKeys, cfg.KD)
+}
+
+// LoadPbftSimConfig loads configuration for running PBFT simulation
+func (cfg *Config) LoadPbftSimConfig() {
+	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts") // TODO: read from config.yaml in future.
+	cfg.IPList, cfg.Ports, cfg.GrpcPorts = GetIPConfigs(cfg.HostsFile)
+	cfg.NumKeys = len(cfg.IPList)
+	cfg.N = cfg.NumKeys - 1 // we assume client count to be 1
+	cfg.NumQuest = 100
+	cfg.GenerateKeysToFile(cfg.NumKeys)
 }

@@ -112,7 +112,7 @@ func EncodeECDSAKeys(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) (
 }
 
 // GetIPConfigs loads all the IPs from the ~/hosts files
-func GetIPConfigs(s string) ([]string, []int) {
+func GetIPConfigs(s string) ([]string, []int, []int) {
 	// s: config file path
 	MyPrint(1, "Loading IP configs...\n")
 	contentB, err := ioutil.ReadFile(s)
@@ -120,9 +120,11 @@ func GetIPConfigs(s string) ([]string, []int) {
 	content := string(contentB)
 	lst := strings.Fields(content)
 	ports := make([]int, 0)
+	grpcports := make([]int, 0)
 	for k, v := range lst {
 		MyPrint(0, string(k), v)
 		ports = append(ports, BasePort+k)
+		grpcports = append(grpcports, GrpcBasePort+k)
 	}
-	return lst, ports
+	return lst, ports, grpcports
 }
