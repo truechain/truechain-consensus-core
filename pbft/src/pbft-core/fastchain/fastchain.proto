@@ -4,36 +4,23 @@ package fastchain;
 
 //Interface exposed by pbft committee nodes
 service FastChain {
-        //RPC service that responds whether the node is the leader
-        rpc CheckLeader (CheckLeaderReq) returns (CheckLeaderResp) {}
-        
         //Send new transaction to presumed leader node
-        rpc NewTxnRequest (Request) returns (GenericResp) {}
+        rpc NewTxnRequest (Transaction) returns (GenericResp) {}
 }
 
 message Request {
     message Inner {
-        int32 id        = 1;
-        int32 seq       = 2;
-        int32 view      = 3;
-        int32 type      = 4;
-        bytes msg       = 5;
-        int64 timestamp = 6;
-    }
-    message MsgSignature {
-            int64 r = 1;
-            int64 s = 2;
+        int32 id                = 1;
+        int32 seq               = 2;
+        int32 view              = 3;
+        int32 type              = 4;
+        PbftBlock block         = 5;
+        int64 timestamp         = 6;
     }
 
     Inner inner         = 1;
     bytes dig           = 2;
-    MsgSignature sig    = 3;
-    bytes outer         = 4;
-}
-
-message CheckLeaderReq {}
-message CheckLeaderResp {
-        bool message = 1;
+    bytes outer         = 3;
 }
 
 message PbftNode {
@@ -46,12 +33,6 @@ message Nodes {
     repeated PbftNode nodes = 1;
 }
 
-message PbftBlockHeader {
-    int64  Number 	= 1;
-    int64  GasLimit     = 2;
-    int64  GasUsed	= 3;
-    int64  Time		= 4;
-}
 message TxnData {
     uint64 AccountNonce       	 = 1;
     int64  Price 	     	 = 2;
@@ -59,25 +40,29 @@ message TxnData {
     bytes  Recipient		 = 4;
     int64  Amount 		 = 5;
     bytes  Payload		 = 6;
-    
-    int64  V 			 = 7;
-    int64  R			 = 8;
-    int64  S			 = 9;
-
-    bytes Hash			 = 10;
+    bytes  Signature             = 7;
+    bytes  Hash			 = 8;
 }
 message Transaction {
     TxnData data 		 = 1;
 }
 
-message Transactions {
-    repeated Transaction txns = 1;
+message PbftBlockHeader {
+    int64  Number 	= 1;
+    int64  GasLimit     = 2;
+    int64  GasUsed	= 3;
+    int64  Time		= 4;
 }
 
 message PbftBlock {
-    PbftBlockHeader   header    = 1;
-    Transactions      txns      = 2;
-    repeated string   signs     = 3;   
+    PbftBlockHeader             header  = 1;
+    repeated Transaction        txns    = 2;
+    repeated string             signs   = 3;   
+}
+
+message TrueChain {
+        repeated PbftBlock blocks       = 1;
+        PbftBlockHeader lastheader      = 2;
 }
 
 message GenericResp {

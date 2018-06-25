@@ -19,8 +19,8 @@ package pbftserver
 import (
 	"fmt"
 	"log"
-	"math/big"
 	"net"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -32,12 +32,12 @@ import (
 
 // PbftServer defines the base properties of a pbft node server
 type PbftServer struct {
-	IP   string
-	Port int
-	Nd   *pbft.Node
-	Cfg  *pbft.Config
-	Out  chan pbft.ApplyMsg
-	//TxnChan chan pb.Transaction
+	IP      string
+	Port    int
+	Nd      *pbft.Node
+	Cfg     *pbft.Config
+	Out     chan pbft.ApplyMsg
+	TxnPool chan pb.Transaction
 }
 
 type fastChainServer struct {
@@ -49,46 +49,41 @@ func (sv *PbftServer) Start() {
 	pbft.MyPrint(1, "Firing up peer server...\n")
 }
 
-// CheckLeader lets client know of its prime replica status
-func (sv *fastChainServer) CheckLeader(context.Context, *pb.CheckLeaderReq) (*pb.CheckLeaderResp, error) {
-	return &pb.CheckLeaderResp{Message: sv.pbftSv.Nd.Primary == sv.pbftSv.Nd.ID}, nil
-}
-
-func verifyTxnReq(req *pb.Request) error {
+func verifyTxnReq(req *pb.Transaction) error {
 	// TODO: Transaction verification logic goes here
 	fmt.Println("Verifying transaction request")
 	return nil
 }
 
 // createInternalPbftReq wraps a transaction request from client for internal rpc communication between pbft nodes
-func createInternalPbftReq(txnReq *pb.Request) pbft.Request {
+func (sv *PbftServer) createInternalPbftReq(proposedBlock *pb.PbftBlock) pbft.Request {
 	req := pbft.Request{}
 	reqInner := pbft.RequestInner{}
 
-	reqInner.ID = int(txnReq.Inner.Id)
-	reqInner.Seq = int(txnReq.Inner.Seq)
-	reqInner.View = int(txnReq.Inner.View)
-	reqInner.Reqtype = int(txnReq.Inner.Type)
-	reqInner.Msg = pbft.MsgType(txnReq.Inner.Msg[:])
-	reqInner.Timestamp = txnReq.Inner.Timestamp
+	reqInner.ID = sv.Cfg.N // client-id
+	reqInner.Seq = 0
+	reqInner.View = 0
+	reqInner.Reqtype = pbft.TypeRequest // client request
+	reqInner.Block = proposedBlock
+	reqInner.Timestamp = time.Now().Unix()
 
-	sig := pbft.MsgSignature{}
-	sig.R = big.NewInt(txnReq.Sig.R)
-	sig.S = big.NewInt(txnReq.Sig.S)
+	reqInner.Msg = pbft.MsgType("")
 
 	req.Inner = reqInner
-	req.Sig = sig
-	req.Dig = pbft.DigType(txnReq.Dig[:])
+
+	req.AddSig(sv.Nd.EcdsaKey)
 
 	return req
 }
 
-// NewTxnRequest handles transaction rquests from clients
-func (sv *fastChainServer) NewTxnRequest(ctx context.Context, txnReq *pb.Request) (*pb.GenericResp, error) {
-	_ = verifyTxnReq(txnReq)
+func (sv *PbftServer) addToTxnPool(txn pb.Transaction) {
+	sv.TxnPool <- txn
+}
 
-	req := createInternalPbftReq(txnReq)
-	sv.pbftSv.Nd.NewClientRequest(req, req.Inner.ID)
+// NewTxnRequest handles transaction rquests from clients
+func (sv *fastChainServer) NewTxnRequest(ctx context.Context, txnReq *pb.Transaction) (*pb.GenericResp, error) {
+	sv.pbftSv.addToTxnPool(*txnReq)
+	_ = verifyTxnReq(txnReq)
 
 	return &pb.GenericResp{Msg: "Transaction request received"}, nil
 }
@@ -101,7 +96,34 @@ func BuildServer(cfg pbft.Config, IP string, Port int, GrpcPort int, me int) *Pb
 	sv.Port = Port
 	sv.Out = make(chan pbft.ApplyMsg, cfg.NumQuest)
 	sv.Cfg = &cfg
-	//sv.TxnChan = make(chan pb.Transaction)
+	sv.TxnPool = make(chan pb.Transaction)
+
+	blockTxnChan := make(chan pb.Transaction, cfg.Blocksize)
+	go func(blockTxnChan chan pb.Transaction) {
+		for {
+			txn := <-sv.TxnPool
+			blockTxnChan <- txn
+		}
+	}(blockTxnChan)
+
+	go func() {
+		for {
+			blockTxns := make([]*pb.Transaction, 0)
+			for i := 0; i <= cfg.Blocksize; i++ {
+				txn := <-blockTxnChan
+				blockTxns = append(blockTxns, &txn)
+				fmt.Println("Adding transaction request %s to block", string(txn.Data.Payload))
+			}
+
+			pbftBlock := pb.PbftBlock{}
+			pbftBlock.Header = &pb.PbftBlockHeader{}
+			pbftBlock.Txns = blockTxns
+			fmt.Println("Block created")
+
+			req := sv.createInternalPbftReq(&pbftBlock)
+			sv.Nd.NewClientRequest(req, cfg.N)
+		}
+	}()
 
 	applyChan := make(chan pbft.ApplyMsg, cfg.NumQuest)
 

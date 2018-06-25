@@ -44,6 +44,7 @@ type Config struct {
 	HostsFile string   // network config file, to read IP addresses from
 	NumQuest  int      // NumQuest is the number of requests sent from client
 	NumKeys   int      // NumKeys is the count of IP addresses (BFT nodes) participating
+	Blocksize int      // Blocksize specifies the number of transactions per block
 }
 
 // GenerateKeysToFile generates ECDSA public-private keypairs to a folder
@@ -63,4 +64,5 @@ func (cfg *Config) LoadPbftSimConfig() {
 	cfg.N = cfg.NumKeys - 1 // we assume client count to be 1
 	cfg.NumQuest = 100
 	cfg.GenerateKeysToFile(cfg.NumKeys)
+	cfg.Blocksize = 10 // This is hardcoded to 10 for now
 }

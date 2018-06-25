@@ -187,6 +187,51 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/ethereum/go-ethereum/common",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "eaff89291ce998ba4bf9b9816ca8a15c8b85f440",
+			"branch": "master",
+			"path": "common",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/crypto",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "eaff89291ce998ba4bf9b9816ca8a15c8b85f440",
+			"branch": "master",
+			"path": "/crypto",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/rlp",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "eaff89291ce998ba4bf9b9816ca8a15c8b85f440",
+			"branch": "master",
+			"path": "rlp",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/vendor/github.com/aristanetworks/goarista/monotime",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "eaff89291ce998ba4bf9b9816ca8a15c8b85f440",
+			"branch": "master",
+			"path": "vendor/github.com/aristanetworks/goarista/monotime",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/vendor/github.com/btcsuite/btcd/btcec",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "eaff89291ce998ba4bf9b9816ca8a15c8b85f440",
+			"branch": "master",
+			"path": "vendor/github.com/btcsuite/btcd/btcec",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/fatih/color",
 			"repository": "https://github.com/fatih/color",
 			"vcs": "git",

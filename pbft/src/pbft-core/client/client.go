@@ -17,10 +17,7 @@ limitations under the License.
 package main
 
 import (
-	"bytes"
 	"crypto/ecdsa"
-	"crypto/rand"
-	"encoding/gob"
 	"fmt"
 	"log"
 	"path"
@@ -33,6 +30,8 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	pb "pbft-core/fastchain"
+
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 )
 
 var (
@@ -70,28 +69,28 @@ func (cl *Client) LoadPbftClientConfig() {
 	cl.privKey = sk
 }
 
-func addSig(req *pb.Request, privKey *ecdsa.PrivateKey) {
+func addSig(txnData *pb.TxnData, privKey *ecdsa.PrivateKey) {
 	//MyPrint(1, "adding signature.\n")
-	gob.Register(&pb.Request_Inner{})
+	/*gob.Register(&pb.Request_Inner{})
 	b := bytes.Buffer{}
 	e := gob.NewEncoder(&b)
 	err := e.Encode(req.Inner)
 	if err != nil {
 		pbft.MyPrint(3, "%s err:%s", `failed to encode!\n`, err.Error())
 		return
-	}
+	}*/
 
-	s := pbft.GetHash(string(b.Bytes()))
+	/*s := pbft.GetHash(string(txnData.Payload))
 	pbft.MyPrint(1, "digest %s.\n", string(s))
-	req.Dig = []byte(pbft.DigType(s))
+	req.Dig = []byte(pbft.DigType(s))*/
 	if privKey != nil {
-		sigr, sigs, err := ecdsa.Sign(rand.Reader, privKey, []byte(s))
+		hashData := ethcrypto.Keccak256(txnData.Payload)
+		txnData.Signature, _ = ethcrypto.Sign(hashData, privKey)
+		/*sigr, sigs, err := ecdsa.Sign(rand.Reader, privKey, []byte(s))
 		if err != nil {
 			pbft.MyPrint(3, "%s", "Error signing.")
 			return
-		}
-
-		req.Sig = &pb.Request_MsgSignature{R: sigr.Int64(), S: sigs.Int64()}
+		}*/
 	}
 }
 
@@ -99,18 +98,20 @@ func addSig(req *pb.Request, privKey *ecdsa.PrivateKey) {
 func (cl *Client) NewRequest(msg string, timeStamp int64) {
 	//broadcast the request
 	for i := 0; i < cfg.N; i++ {
-		req := &pb.Request{
-			Inner: &pb.Request_Inner{
-				Id:        int32(cfg.N),
-				Seq:       0,
-				View:      0,
-				Type:      int32(pbft.TypeRequest),
-				Msg:       []byte(pbft.MsgType(msg)),
-				Timestamp: timeStamp,
+		txnreq := &pb.Transaction{
+			Data: &pb.TxnData{
+				AccountNonce: 0,
+				Price:        0,
+				GasLimit:     0,
+				Recipient:    []byte(""),
+				Amount:       0,
+				Payload:      []byte(msg),
+				Hash:         []byte(""),
+				Signature:    []byte(""),
 			},
 		}
 
-		addSig(req, cl.privKey)
+		addSig(txnreq.Data, cl.privKey)
 		conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", cfg.GrpcPorts[i]), grpc.WithInsecure())
 		if err != nil {
 			log.Fatalf("did not connect: %v", err)
@@ -119,17 +120,7 @@ func (cl *Client) NewRequest(msg string, timeStamp int64) {
 		c := pb.NewFastChainClient(conn)
 		ctx := context.TODO()
 
-		checkLeaderResp, err := c.CheckLeader(ctx, &pb.CheckLeaderReq{})
-		if err != nil {
-			log.Fatalf("could not check if node is leader: %v", err)
-		}
-		fmt.Printf("%d", checkLeaderResp.Message)
-
-		if !checkLeaderResp.Message {
-			continue
-		}
-
-		resp, err := c.NewTxnRequest(ctx, req)
+		resp, err := c.NewTxnRequest(ctx, txnreq)
 		if err != nil {
 			log.Fatalf("could not send transaction request to pbft node: %v", err)
 		}

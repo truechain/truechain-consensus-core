@@ -35,6 +35,7 @@ import (
 	"sync"
 
 	"github.com/alecthomas/repr"
+	pb "pbft-core/fastchain"
 )
 
 // const ServerPort = 40162
@@ -105,9 +106,6 @@ type viewDictKey struct {
 	id  int
 }
 
-// DigType is the message digest type
-type DigType string
-
 type nodeMsgLog struct {
 	mu      sync.Mutex
 	content map[int](map[int](map[int]Request))
@@ -175,7 +173,7 @@ type Node struct {
 	ListenReady chan bool
 	SetupReady  chan bool
 
-	ecdsaKey             *ecdsa.PrivateKey
+	EcdsaKey             *ecdsa.PrivateKey
 	helloSignature       *hellowSignature
 	connections          int
 	ID                   int
@@ -235,6 +233,9 @@ type ActiveItem struct {
 	clientID int
 }
 
+// DigType is the message digest type
+type DigType string
+
 // MsgType contains the message of the request as part of RequestInner
 type MsgType string
 
@@ -248,6 +249,7 @@ type RequestInner struct {
 	View      int
 	Reqtype   int //or int?
 	Msg       MsgType
+	Block     *pb.PbftBlock
 	Timestamp int64
 	//outer *Request
 }
@@ -265,16 +267,17 @@ type Request struct {
 	Sig   MsgSignature
 }
 
-func (nd *Node) createRequest(reqType int, seq int, msg MsgType) Request {
-	key := nd.ecdsaKey
-	m := RequestInner{nd.ID, seq, nd.view, reqType, msg, -1} // , nil}
+func (nd *Node) createRequest(reqType int, seq int, msg MsgType, block *pb.PbftBlock) Request {
+	key := nd.EcdsaKey
+	m := RequestInner{nd.ID, seq, nd.view, reqType, msg, block, -1} // , nil}
 	req := Request{m, "", MsgSignature{nil, nil}}
 	//req.Inner.outer = &req
-	req.addSig(key)
+	req.AddSig(key)
 	return req
 }
 
-func (req *Request) addSig(privKey *ecdsa.PrivateKey) {
+// AddSig signs message with private key of node
+func (req *Request) AddSig(privKey *ecdsa.PrivateKey) {
 	//MyPrint(1, "adding signature.\n")
 	gob.Register(&RequestInner{})
 	b := bytes.Buffer{}
@@ -648,7 +651,7 @@ func (nd *Node) handleTimeout(dig DigType, view int) {
 		}
 	}
 
-	viewChange := nd.createRequest(typeViewChange, nd.lastStableCheckpoint, MsgType(b.Bytes()))
+	viewChange := nd.createRequest(typeViewChange, nd.lastStableCheckpoint, MsgType(b.Bytes()), nil)
 	nd.broadcast(viewChange) // TODO: broadcast view change RPC path.
 	nd.processViewChange(viewChange, 0)
 }
@@ -686,7 +689,7 @@ func (nd *Node) NewClientRequest(req Request, clientID int) { // TODO: change to
 	if nd.Primary == nd.ID {
 		MyPrint(2, "[%d] Leader acked: %v.\n", nd.ID, req)
 		nd.seq = nd.seq + 1
-		m := nd.createRequest(typePrePrepare, nd.seq, MsgType(req.Dig))
+		m := nd.createRequest(typePrePrepare, nd.seq, MsgType(req.Dig), req.Inner.Block)
 		nd.nodeMessageLog.set(m.Inner.Reqtype, m.Inner.Seq, m.Inner.ID, m)
 		// write log
 		nd.broadcast(m) // TODO: broadcast pre-prepare RPC path.
@@ -707,7 +710,7 @@ func (nd *Node) initializeKeys() {
 		if i == nd.ID {
 			pemkeyFile := fmt.Sprintf("sign%v.pem", i)
 			pemKey := FetchPrivateKey(path.Join(nd.cfg.KD, pemkeyFile))
-			nd.ecdsaKey = pemKey
+			nd.EcdsaKey = pemKey
 			MyPrint(1, "Fetched private key")
 		}
 	}
@@ -802,14 +805,14 @@ func (nd *Node) processPrePrepare(req Request, clientID int) {
 	}
 
 	nd.nodeMessageLog.set(req.Inner.Reqtype, req.Inner.Seq, req.Inner.ID, req)
-	m := nd.createRequest(typePrepare, req.Inner.Seq, MsgType(req.Inner.Msg)) // TODO: check content!
+	m := nd.createRequest(typePrepare, req.Inner.Seq, MsgType(req.Inner.Msg), req.Inner.Block) // TODO: check content!
 	nd.nodeMessageLog.set(m.Inner.Reqtype, m.Inner.Seq, m.Inner.ID, m)
 	nd.recordPBFT(m)
 	nd.incPrepDict(DigType(req.Inner.Msg))
 	nd.broadcast(m)
 	if nd.checkPrepareMargin(DigType(req.Inner.Msg), req.Inner.Seq) { // TODO: check dig vs Inner.Msg
 		nd.record("PREPARED sequence number " + strconv.Itoa(req.Inner.Seq) + "\n")
-		m := nd.createRequest(typeCommit, req.Inner.Seq, req.Inner.Msg) // TODO: check content
+		m := nd.createRequest(typeCommit, req.Inner.Seq, req.Inner.Msg, req.Inner.Block) // TODO: check content
 		nd.broadcast(m)
 		nd.nodeMessageLog.set(m.Inner.Reqtype, m.Inner.Seq, m.Inner.ID, m)
 		nd.incCommDict(DigType(req.Inner.Msg)) //TODO: check content
@@ -857,7 +860,7 @@ func (nd *Node) processPrepare(req Request, clientID int) {
 	if nd.checkPrepareMargin(DigType(req.Inner.Msg), req.Inner.Seq) { // TODO: check dig vs Inner.Msg
 		MyPrint(2, "[%d] Checked Margin\n", nd.ID)
 		nd.record("PREPARED sequence number " + strconv.Itoa(req.Inner.Seq) + "\n")
-		m := nd.createRequest(typeCommit, req.Inner.Seq, req.Inner.Msg) // TODO: check content
+		m := nd.createRequest(typeCommit, req.Inner.Seq, req.Inner.Msg, req.Inner.Block) // TODO: check content
 		nd.broadcast(m)
 		nd.nodeMessageLog.set(m.Inner.Reqtype, m.Inner.Seq, m.Inner.ID, m)
 		nd.incCommDict(m.Dig) //TODO: check content
@@ -1045,12 +1048,12 @@ func (nd *Node) processViewChange(req Request, from int) {
 				continue
 			}
 			r, _ := nd.nodeMessageLog.get(typePrePrepare, j, nd.Primary)
-			tmp := nd.createRequest(typePrePrepare, j, r.Inner.Msg)
+			tmp := nd.createRequest(typePrePrepare, j, r.Inner.Msg, r.Inner.Block)
 			reqList = append(reqList, tmp)
 			//e.Encode(tmp)
 		}
 		e.Encode(reqList)
-		out := nd.createRequest(typeNewView, 0, MsgType(buf.Bytes()))
+		out := nd.createRequest(typeNewView, 0, MsgType(buf.Bytes()), nil)
 		nd.viewInUse = true
 		nd.Primary = nd.view % nd.N
 		nd.active = make(map[DigType]ActiveItem)
@@ -1065,7 +1068,7 @@ func (nd *Node) processViewChange(req Request, from int) {
 func (nd *Node) newViewProcessPrePrepare(prprList []Request) bool {
 	for _, r := range prprList {
 		if nd.verifyMsg(r) && r.verifyDig() {
-			out := nd.createRequest(typePrepare, r.Inner.Seq, r.Inner.Msg)
+			out := nd.createRequest(typePrepare, r.Inner.Seq, r.Inner.Msg, r.Inner.Block)
 			nd.broadcast(out)
 		} else {
 			return false
