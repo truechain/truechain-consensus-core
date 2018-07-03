@@ -18,19 +18,18 @@ package pbftserver
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"path"
 	"time"
 
-	"golang.org/x/net/context"
-
 	"pbft-core"
-
 	pb "pbft-core/fastchain"
 
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
@@ -55,9 +54,7 @@ func (sv *PbftServer) Start() {
 
 func (sv *PbftServer) verifyTxnReq(req *pb.Transaction) bool {
 	sig := req.Data.Signature
-	data := req.Data.Payload
-	hashData := ethcrypto.Keccak256(data)
-	pubkey, _ := ethcrypto.Ecrecover(hashData, sig)
+	pubkey, _ := ethcrypto.Ecrecover(req.Data.Hash, sig)
 
 	clientPubKeyFile := fmt.Sprintf("sign%v.pub", sv.Cfg.N)
 	fmt.Println("fetching file: ", clientPubKeyFile)
@@ -99,6 +96,7 @@ func (sv *fastChainServer) NewTxnRequest(ctx context.Context, txnReq *pb.Transac
 		fmt.Println("Txn verified")
 	} else {
 		fmt.Println("Txn verification failed")
+		return &pb.GenericResp{Msg: "Transaction verification failed"}, errors.New("Invalid transaction request")
 	}
 
 	sv.pbftSv.addToTxnPool(*txnReq)

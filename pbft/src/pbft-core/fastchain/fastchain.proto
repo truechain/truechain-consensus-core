@@ -34,17 +34,18 @@ message Nodes {
 }
 
 message TxnData {
-    uint64 AccountNonce       	 = 1;
-    int64  Price 	     	 = 2;
-    int64  GasLimit		 = 3;
-    bytes  Recipient		 = 4;
-    int64  Amount 		 = 5;
-    bytes  Payload		 = 6;
-    bytes  Signature             = 7;
-    bytes  Hash			 = 8;
+    uint64 AccountNonce = 1;
+    int64  Price        = 2;
+    int64  GasLimit     = 3;
+    bytes  Recipient    = 4;
+    int64  Amount       = 5;
+    bytes  Payload      = 6;
+    bytes  Signature    = 7;
+    bytes  Hash         = 8;
 }
+
 message Transaction {
-    TxnData data 		 = 1;
+    TxnData data        = 1;
 }
 
 message PbftBlockHeader {

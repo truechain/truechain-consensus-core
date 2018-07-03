@@ -36,7 +36,7 @@ func (m *Request) Reset()         { *m = Request{} }
 func (m *Request) String() string { return proto.CompactTextString(m) }
 func (*Request) ProtoMessage()    {}
 func (*Request) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fastchain_a2f3fdeaa9c87286, []int{0}
+	return fileDescriptor_fastchain_c1a2415e71fa52f1, []int{0}
 }
 func (m *Request) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Request.Unmarshal(m, b)
@@ -93,7 +93,7 @@ func (m *Request_Inner) Reset()         { *m = Request_Inner{} }
 func (m *Request_Inner) String() string { return proto.CompactTextString(m) }
 func (*Request_Inner) ProtoMessage()    {}
 func (*Request_Inner) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fastchain_a2f3fdeaa9c87286, []int{0, 0}
+	return fileDescriptor_fastchain_c1a2415e71fa52f1, []int{0, 0}
 }
 func (m *Request_Inner) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Request_Inner.Unmarshal(m, b)
@@ -168,7 +168,7 @@ func (m *PbftNode) Reset()         { *m = PbftNode{} }
 func (m *PbftNode) String() string { return proto.CompactTextString(m) }
 func (*PbftNode) ProtoMessage()    {}
 func (*PbftNode) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fastchain_a2f3fdeaa9c87286, []int{1}
+	return fileDescriptor_fastchain_c1a2415e71fa52f1, []int{1}
 }
 func (m *PbftNode) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PbftNode.Unmarshal(m, b)
@@ -220,7 +220,7 @@ func (m *Nodes) Reset()         { *m = Nodes{} }
 func (m *Nodes) String() string { return proto.CompactTextString(m) }
 func (*Nodes) ProtoMessage()    {}
 func (*Nodes) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fastchain_a2f3fdeaa9c87286, []int{2}
+	return fileDescriptor_fastchain_c1a2415e71fa52f1, []int{2}
 }
 func (m *Nodes) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Nodes.Unmarshal(m, b)
@@ -265,7 +265,7 @@ func (m *TxnData) Reset()         { *m = TxnData{} }
 func (m *TxnData) String() string { return proto.CompactTextString(m) }
 func (*TxnData) ProtoMessage()    {}
 func (*TxnData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fastchain_a2f3fdeaa9c87286, []int{3}
+	return fileDescriptor_fastchain_c1a2415e71fa52f1, []int{3}
 }
 func (m *TxnData) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TxnData.Unmarshal(m, b)
@@ -352,7 +352,7 @@ func (m *Transaction) Reset()         { *m = Transaction{} }
 func (m *Transaction) String() string { return proto.CompactTextString(m) }
 func (*Transaction) ProtoMessage()    {}
 func (*Transaction) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fastchain_a2f3fdeaa9c87286, []int{4}
+	return fileDescriptor_fastchain_c1a2415e71fa52f1, []int{4}
 }
 func (m *Transaction) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Transaction.Unmarshal(m, b)
@@ -393,7 +393,7 @@ func (m *PbftBlockHeader) Reset()         { *m = PbftBlockHeader{} }
 func (m *PbftBlockHeader) String() string { return proto.CompactTextString(m) }
 func (*PbftBlockHeader) ProtoMessage()    {}
 func (*PbftBlockHeader) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fastchain_a2f3fdeaa9c87286, []int{5}
+	return fileDescriptor_fastchain_c1a2415e71fa52f1, []int{5}
 }
 func (m *PbftBlockHeader) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PbftBlockHeader.Unmarshal(m, b)
@@ -454,7 +454,7 @@ func (m *PbftBlock) Reset()         { *m = PbftBlock{} }
 func (m *PbftBlock) String() string { return proto.CompactTextString(m) }
 func (*PbftBlock) ProtoMessage()    {}
 func (*PbftBlock) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fastchain_a2f3fdeaa9c87286, []int{6}
+	return fileDescriptor_fastchain_c1a2415e71fa52f1, []int{6}
 }
 func (m *PbftBlock) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PbftBlock.Unmarshal(m, b)
@@ -507,7 +507,7 @@ func (m *TrueChain) Reset()         { *m = TrueChain{} }
 func (m *TrueChain) String() string { return proto.CompactTextString(m) }
 func (*TrueChain) ProtoMessage()    {}
 func (*TrueChain) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fastchain_a2f3fdeaa9c87286, []int{7}
+	return fileDescriptor_fastchain_c1a2415e71fa52f1, []int{7}
 }
 func (m *TrueChain) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TrueChain.Unmarshal(m, b)
@@ -552,7 +552,7 @@ func (m *GenericResp) Reset()         { *m = GenericResp{} }
 func (m *GenericResp) String() string { return proto.CompactTextString(m) }
 func (*GenericResp) ProtoMessage()    {}
 func (*GenericResp) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fastchain_a2f3fdeaa9c87286, []int{8}
+	return fileDescriptor_fastchain_c1a2415e71fa52f1, []int{8}
 }
 func (m *GenericResp) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GenericResp.Unmarshal(m, b)
@@ -666,9 +666,9 @@ var _FastChain_serviceDesc = grpc.ServiceDesc{
 	Metadata: "fastchain.proto",
 }
 
-func init() { proto.RegisterFile("fastchain.proto", fileDescriptor_fastchain_a2f3fdeaa9c87286) }
+func init() { proto.RegisterFile("fastchain.proto", fileDescriptor_fastchain_c1a2415e71fa52f1) }
 
-var fileDescriptor_fastchain_a2f3fdeaa9c87286 = []byte{
+var fileDescriptor_fastchain_c1a2415e71fa52f1 = []byte{
 	// 630 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x54, 0xcd, 0x6e, 0xdb, 0x38,
 	0x10, 0x5e, 0x59, 0x7f, 0xd6, 0xd8, 0xbb, 0x59, 0x70, 0x83, 0x80, 0x30, 0x16, 0xa8, 0xa1, 0x43,

@@ -27,6 +27,7 @@ import (
 	"pbft-core"
 	"pbft-core/pbft-server"
 
+	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
@@ -72,7 +73,9 @@ func (cl *Client) LoadPbftClientConfig() {
 
 func (cl *Client) addSig(txnData *pb.TxnData) {
 	if cl.privKey != nil {
-		hashData := ethcrypto.Keccak256(txnData.Payload)
+		data, _ := proto.Marshal(txnData)
+		hashData := ethcrypto.Keccak256(data)
+		txnData.Hash = hashData
 		sig, _ := ethcrypto.Sign(hashData, cl.privKey)
 		txnData.Signature = sig
 	}
@@ -90,8 +93,6 @@ func (cl *Client) NewRequest(msg string, timeStamp int64) {
 				Recipient:    []byte(""),
 				Amount:       0,
 				Payload:      []byte(msg),
-				Hash:         []byte(""),
-				Signature:    []byte(""),
 			},
 		}
 
