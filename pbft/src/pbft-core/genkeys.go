@@ -17,19 +17,17 @@ limitations under the License.
 package pbft
 
 import (
-	// "bytes"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
-	// "encoding/pem"
-	// "crypto/x509"
-	// "encoding/gob"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
+
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 )
 
 // GetCWD provides the current work dir's absolute filepath,
@@ -42,27 +40,21 @@ func GetCWD() string {
 	return dir
 }
 
-// func encode(privateKey *ecdsa.PrivateKey, publicKey *ecdsa.PublicKey) ([]byte, []byte) {
-// 		x509Encoded, _ := x509.MarshalECPrivateKey(privateKey)
-// 		pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
-// 		x509EncodedPub, _ := x509.MarshalPKIXPublicKey(publicKey)
-// 		pemEncodedPub := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: x509EncodedPub})
-//     return []byte(pemEncoded), []byte(pemEncodedPub)
-// }
-
 // WriteNewKeys generates kcount # of ECDSA public-private key pairs and writes them
 // into a folder kdir.
 func WriteNewKeys(kcount int, kdir string) {
 	for k := 0; k < kcount; k++ {
-		privateKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		privateKey, _ := ecdsa.GenerateKey(ethcrypto.S256(), rand.Reader)
 		publicKey := &privateKey.PublicKey
-		pemEncoded, pemEncodedPub := EncodeECDSAKeys(privateKey, publicKey)
+
+		pemEncoded := hex.EncodeToString(ethcrypto.FromECDSA(privateKey))
+		pemEncodedPub := hex.EncodeToString(ethcrypto.FromECDSAPub(publicKey))
 
 		pemkeyFname := fmt.Sprintf("sign%v.pem", k)
-		err1 := ioutil.WriteFile(path.Join(kdir, pemkeyFname), pemEncoded, 0644)
+		err1 := ioutil.WriteFile(path.Join(kdir, pemkeyFname), []byte(pemEncoded), 0600)
 		CheckErr(err1)
 		pubkeyFname := fmt.Sprintf("sign%v.pub", k)
-		err2 := ioutil.WriteFile(path.Join(kdir, pubkeyFname), pemEncodedPub, 0644)
+		err2 := ioutil.WriteFile(path.Join(kdir, pubkeyFname), []byte(pemEncodedPub), 0644)
 		CheckErr(err2)
 	}
 }

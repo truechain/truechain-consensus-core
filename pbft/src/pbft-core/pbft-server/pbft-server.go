@@ -17,17 +17,21 @@ limitations under the License.
 package pbftserver
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net"
+	"path"
 	"time"
 
 	"golang.org/x/net/context"
 
 	"pbft-core"
 
-	"google.golang.org/grpc"
 	pb "pbft-core/fastchain"
+
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
+	"google.golang.org/grpc"
 )
 
 // PbftServer defines the base properties of a pbft node server
@@ -49,10 +53,21 @@ func (sv *PbftServer) Start() {
 	pbft.MyPrint(1, "Firing up peer server...\n")
 }
 
-func verifyTxnReq(req *pb.Transaction) error {
-	// TODO: Transaction verification logic goes here
-	fmt.Println("Verifying transaction request")
-	return nil
+func (sv *PbftServer) verifyTxnReq(req *pb.Transaction) bool {
+	sig := req.Data.Signature
+	data := req.Data.Payload
+	hashData := ethcrypto.Keccak256(data)
+	pubkey, _ := ethcrypto.Ecrecover(hashData, sig)
+
+	clientPubKeyFile := fmt.Sprintf("sign%v.pub", sv.Cfg.N)
+	fmt.Println("fetching file: ", clientPubKeyFile)
+	clientPubKey, _ := pbft.FetchPublicKeyBytes(path.Join(sv.Cfg.KD, clientPubKeyFile))
+
+	if bytes.Equal(pubkey, clientPubKey) {
+		return true
+	}
+
+	return false
 }
 
 // createInternalPbftReq wraps a transaction request from client for internal rpc communication between pbft nodes
@@ -67,8 +82,6 @@ func (sv *PbftServer) createInternalPbftReq(proposedBlock *pb.PbftBlock) pbft.Re
 	reqInner.Block = proposedBlock
 	reqInner.Timestamp = time.Now().Unix()
 
-	reqInner.Msg = pbft.MsgType("")
-
 	req.Inner = reqInner
 
 	req.AddSig(sv.Nd.EcdsaKey)
@@ -82,9 +95,13 @@ func (sv *PbftServer) addToTxnPool(txn pb.Transaction) {
 
 // NewTxnRequest handles transaction rquests from clients
 func (sv *fastChainServer) NewTxnRequest(ctx context.Context, txnReq *pb.Transaction) (*pb.GenericResp, error) {
-	sv.pbftSv.addToTxnPool(*txnReq)
-	_ = verifyTxnReq(txnReq)
+	if sv.pbftSv.verifyTxnReq(txnReq) {
+		fmt.Println("Txn verified")
+	} else {
+		fmt.Println("Txn verification failed")
+	}
 
+	sv.pbftSv.addToTxnPool(*txnReq)
 	return &pb.GenericResp{Msg: "Transaction request received"}, nil
 }
 
@@ -130,7 +147,7 @@ func BuildServer(cfg pbft.Config, IP string, Port int, GrpcPort int, me int) *Pb
 	go func(aC chan pbft.ApplyMsg) {
 		for {
 			c := <-aC
-			pbft.MyPrint(4, "[0.0.0.0:%d] [%d] New Sequence Item: %v\n", sv.Port, me, c)
+			//pbft.MyPrint(4, "[0.0.0.0:%d] [%d] New Sequence Item: %v\n", sv.Port, me, c)
 			sv.Out <- c
 		}
 	}(applyChan)

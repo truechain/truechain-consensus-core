@@ -49,10 +49,9 @@ type Config struct {
 
 // GenerateKeysToFile generates ECDSA public-private keypairs to a folder
 func (cfg *Config) GenerateKeysToFile(numKeys int) {
-	// IdCount := 1000
-	cfg.KD = path.Join(GetCWD(), "keys/")
 	MakeDirIfNot(cfg.KD)
 	WriteNewKeys(numKeys, cfg.KD)
+
 	MyPrint(1, "Generated %d keypairs in %s folder..\n", numKeys, cfg.KD)
 }
 
@@ -63,6 +62,6 @@ func (cfg *Config) LoadPbftSimConfig() {
 	cfg.NumKeys = len(cfg.IPList)
 	cfg.N = cfg.NumKeys - 1 // we assume client count to be 1
 	cfg.NumQuest = 100
-	cfg.GenerateKeysToFile(cfg.NumKeys)
 	cfg.Blocksize = 10 // This is hardcoded to 10 for now
+	cfg.KD = path.Join(GetCWD(), "keys/")
 }

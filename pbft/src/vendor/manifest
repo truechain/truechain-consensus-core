@@ -446,12 +446,57 @@
 			"notests": true
 		},
 		{
-			"importpath": "golang.org/x/crypto/ssh/terminal",
+			"importpath": "golang.org/x/crypto/curve25519",
 			"repository": "https://go.googlesource.com/crypto",
 			"vcs": "git",
-			"revision": "7f39a6fea4fe9364fb61e1def6a268a51b4f3a06",
+			"revision": "a49355c7e3f8fe157a85be2f77e6e269a0f89602",
 			"branch": "master",
-			"path": "/ssh/terminal",
+			"path": "curve25519",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/crypto/ed25519",
+			"repository": "https://go.googlesource.com/crypto",
+			"vcs": "git",
+			"revision": "a49355c7e3f8fe157a85be2f77e6e269a0f89602",
+			"branch": "master",
+			"path": "ed25519",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/crypto/internal/chacha20",
+			"repository": "https://go.googlesource.com/crypto",
+			"vcs": "git",
+			"revision": "a49355c7e3f8fe157a85be2f77e6e269a0f89602",
+			"branch": "master",
+			"path": "internal/chacha20",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/crypto/internal/subtle",
+			"repository": "https://go.googlesource.com/crypto",
+			"vcs": "git",
+			"revision": "a49355c7e3f8fe157a85be2f77e6e269a0f89602",
+			"branch": "master",
+			"path": "internal/subtle",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/crypto/poly1305",
+			"repository": "https://go.googlesource.com/crypto",
+			"vcs": "git",
+			"revision": "a49355c7e3f8fe157a85be2f77e6e269a0f89602",
+			"branch": "master",
+			"path": "poly1305",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/crypto/ssh",
+			"repository": "https://go.googlesource.com/crypto",
+			"vcs": "git",
+			"revision": "a49355c7e3f8fe157a85be2f77e6e269a0f89602",
+			"branch": "master",
+			"path": "/ssh",
 			"notests": true
 		},
 		{

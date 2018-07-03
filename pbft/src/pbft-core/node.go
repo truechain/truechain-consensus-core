@@ -34,8 +34,10 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/alecthomas/repr"
 	pb "pbft-core/fastchain"
+
+	"github.com/alecthomas/repr"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 )
 
 // const ServerPort = 40162
@@ -199,7 +201,7 @@ type Node struct {
 	prepDict             map[DigType]reqCounter
 	commDict             map[DigType]reqCounter
 	viewDict             viewDictType
-	keyDict              map[int]keyItem
+	KeyDict              map[int]keyItem
 
 	outputLog *os.File
 	commitLog *os.File
@@ -698,18 +700,16 @@ func (nd *Node) NewClientRequest(req Request, clientID int) { // TODO: change to
 
 func (nd *Node) initializeKeys() {
 	gob.Register(&ecdsa.PrivateKey{})
-	// fmt.Println("============")
-	// MyPrint(2, string(nd.N))
-	// MyPrint(2, string(nd.cfg.N)
-	// fmt.Println("============")
+
 	for i := 0; i < nd.N; i++ {
 		pubkeyFile := fmt.Sprintf("sign%v.pub", i)
 		fmt.Println("fetching file: ", pubkeyFile)
-		pubKey := FetchPublicKey(path.Join(nd.cfg.KD, pubkeyFile))
-		nd.keyDict[i] = pubKey
+		pubKeyBytes, _ := FetchPublicKeyBytes(path.Join(nd.cfg.KD, pubkeyFile))
+		pubKey, _ := ethcrypto.UnmarshalPubkey(pubKeyBytes)
+		nd.KeyDict[i] = pubKey
 		if i == nd.ID {
 			pemkeyFile := fmt.Sprintf("sign%v.pem", i)
-			pemKey := FetchPrivateKey(path.Join(nd.cfg.KD, pemkeyFile))
+			pemKey, _ := ethcrypto.LoadECDSA(path.Join(nd.cfg.KD, pemkeyFile))
 			nd.EcdsaKey = pemKey
 			MyPrint(1, "Fetched private key")
 		}
@@ -784,7 +784,6 @@ func (nd *Node) checkCommittedMargin(dig DigType, req Request) bool {
 }
 
 func (nd *Node) processPrePrepare(req Request, clientID int) {
-
 	seq := req.Inner.Seq
 	if val1, ok1 := nd.nodeMessageLog.content[typePrePrepare]; ok1 {
 		if _, ok2 := val1[seq]; ok2 {
@@ -904,7 +903,7 @@ func (nd *Node) viewProcessCheckPoint(vchecklist *[]Request, lastCheckPoint int)
 type viewDict map[int](map[int]Request) //map[viewDictKey]Request
 
 func (nd *Node) verifyMsg(req Request) bool {
-	key := nd.keyDict[req.Inner.ID]
+	key := nd.KeyDict[req.Inner.ID]
 	// check the digest
 	dv := req.verifyDig()
 	// check the signature
@@ -1203,7 +1202,7 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequ
 	//nd.mu = sync.Mutex{}
 	nd.clientBuffer = ""
 	//nd.clientMu = sync.Mutex{}
-	nd.keyDict = make(map[int]keyItem)
+	nd.KeyDict = make(map[int]keyItem)
 	nd.checkpointInterval = 100
 
 	nd.vmin = 0

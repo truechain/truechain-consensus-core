@@ -29,6 +29,7 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+
 	pb "pbft-core/fastchain"
 
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
@@ -63,34 +64,17 @@ func (cl *Client) LoadPbftClientConfig() {
 	cl.Me = 0
 
 	pemkeyFile := fmt.Sprintf("sign%v.pem", cfg.N)
-	sk := pbft.FetchPrivateKey(path.Join(cfg.KD, pemkeyFile))
+	sk, _ := ethcrypto.LoadECDSA(path.Join(cfg.KD, pemkeyFile))
 	fmt.Println("just fetched private key for Client")
 	fmt.Println(sk)
 	cl.privKey = sk
 }
 
-func addSig(txnData *pb.TxnData, privKey *ecdsa.PrivateKey) {
-	//MyPrint(1, "adding signature.\n")
-	/*gob.Register(&pb.Request_Inner{})
-	b := bytes.Buffer{}
-	e := gob.NewEncoder(&b)
-	err := e.Encode(req.Inner)
-	if err != nil {
-		pbft.MyPrint(3, "%s err:%s", `failed to encode!\n`, err.Error())
-		return
-	}*/
-
-	/*s := pbft.GetHash(string(txnData.Payload))
-	pbft.MyPrint(1, "digest %s.\n", string(s))
-	req.Dig = []byte(pbft.DigType(s))*/
-	if privKey != nil {
+func (cl *Client) addSig(txnData *pb.TxnData) {
+	if cl.privKey != nil {
 		hashData := ethcrypto.Keccak256(txnData.Payload)
-		txnData.Signature, _ = ethcrypto.Sign(hashData, privKey)
-		/*sigr, sigs, err := ecdsa.Sign(rand.Reader, privKey, []byte(s))
-		if err != nil {
-			pbft.MyPrint(3, "%s", "Error signing.")
-			return
-		}*/
+		sig, _ := ethcrypto.Sign(hashData, cl.privKey)
+		txnData.Signature = sig
 	}
 }
 
@@ -111,7 +95,7 @@ func (cl *Client) NewRequest(msg string, timeStamp int64) {
 			},
 		}
 
-		addSig(txnreq.Data, cl.privKey)
+		cl.addSig(txnreq.Data)
 		conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", cfg.GrpcPorts[i]), grpc.WithInsecure())
 		if err != nil {
 			log.Fatalf("did not connect: %v", err)

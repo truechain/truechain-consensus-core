@@ -56,6 +56,7 @@ func StartPbftServers() {
 
 func main() {
 	cfg.LoadPbftSimConfig()
+	cfg.GenerateKeysToFile(cfg.NumKeys)
 	StartPbftServers()
 
 	finish := make(chan bool)
