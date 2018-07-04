@@ -20,7 +20,7 @@ Install [Docker](https://docs.docker.com/install/) and [HyperMake](http://evo-cl
 
 check hmake command options
 ```
-git clone https://github.com/hixichen/truechain-consensus-core.git
+git clone https://github.com/truechain/truechain-consensus-core.git
 cd truechain-consensus-core
 git checkout devel
 hmake --targets
@@ -69,7 +69,9 @@ fetching file:  sign3.pub
 ```
 
 ### CI
-To be added
+```
+$ hmake build check test
+```
 
 ### Deployment
 

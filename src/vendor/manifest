@@ -16,6 +16,41 @@
             "revision": "5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4",
             "branch": "master",
             "notests": true
+        },
+        {
+            "importpath": "github.com/stretchr/testify/assert",
+            "repository": "https://github.com/stretchr/testify",
+            "vcs": "git",
+            "revision": "f35b8ab0b5a2cef36673838d662e249dd9c94686",
+            "branch": "master",
+            "path": "/assert",
+            "notests": true
+        },
+        {
+            "importpath": "github.com/stretchr/testify/vendor/github.com/davecgh/go-spew/spew",
+            "repository": "https://github.com/stretchr/testify",
+            "vcs": "git",
+            "revision": "f35b8ab0b5a2cef36673838d662e249dd9c94686",
+            "branch": "master",
+            "path": "vendor/github.com/davecgh/go-spew/spew",
+            "notests": true
+        },
+        {
+            "importpath": "github.com/stretchr/testify/vendor/github.com/pmezard/go-difflib/difflib",
+            "repository": "https://github.com/stretchr/testify",
+            "vcs": "git",
+            "revision": "f35b8ab0b5a2cef36673838d662e249dd9c94686",
+            "branch": "master",
+            "path": "vendor/github.com/pmezard/go-difflib/difflib",
+            "notests": true
+        },
+        {
+            "importpath": "gopkg.in/yaml.v2",
+            "repository": "https://gopkg.in/yaml.v2",
+            "vcs": "git",
+            "revision": "5420a8b6744d3b0345ab293f6fcba19c978f1183",
+            "branch": "master",
+            "notests": true
         }
     ]
 }
