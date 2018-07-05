@@ -20,16 +20,14 @@ import (
 	"crypto/ecdsa"
 	"io/ioutil"
 
-	"github.com/fatih/color"
-	// "encoding/hex"
-	// "crypto/rand"
 	"crypto/x509"
-	// "github.com/ethereum/go-ethereum/common/math"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
+	"github.com/fatih/color"
+	"io"
 	"os"
 	"strings"
-	// "io"
 )
 
 // MyPrint provides customized colored output functionality
@@ -79,6 +77,26 @@ func MakeDirIfNot(dir string) {
 		err := os.Mkdir(dir, 0750)
 		CheckErr(err)
 	}
+}
+
+// FetchPublicKeyBytes fetches ECDSA public key in []byte form
+func FetchPublicKeyBytes(kpath string) ([]byte, error) {
+	buf := make([]byte, 130) //  encoded key length is 1 + 2 * byteLen(publicKey). Also buf len should be even
+	fd, err := os.Open(kpath)
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+	if _, err := io.ReadFull(fd, buf); err != nil {
+		return nil, err
+	}
+
+	key, err := hex.DecodeString(string(buf))
+	if err != nil {
+		return nil, err
+	}
+
+	return key, nil
 }
 
 // FetchPublicKey reads and decodes a public key from file stored on disk

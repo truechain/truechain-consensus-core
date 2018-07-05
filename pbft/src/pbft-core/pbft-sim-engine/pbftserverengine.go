@@ -33,16 +33,6 @@ var (
 	svList []*pbftserver.PbftServer
 )
 
-// LoadPbftSimConfig loads configuration for running PBFT simulation
-/*func LoadPbftSimConfig() {
-	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts") // TODO: read from config.yaml in future.
-	cfg.IPList, cfg.Ports, cfg.GrpcPorts = pbft.GetIPConfigs(cfg.HostsFile)
-	cfg.NumKeys = len(cfg.IPList)
-	cfg.N = cfg.NumKeys - 1 // we assume client count to be 1
-	cfg.NumQuest = 100
-	cfg.GenerateKeysToFile(cfg.NumKeys)
-}*/
-
 // StartPbftServers starts PBFT servers from config information
 func StartPbftServers() {
 	svList = make([]*pbftserver.PbftServer, cfg.N)
@@ -66,6 +56,7 @@ func StartPbftServers() {
 
 func main() {
 	cfg.LoadPbftSimConfig()
+	cfg.GenerateKeysToFile(cfg.NumKeys)
 	StartPbftServers()
 
 	finish := make(chan bool)
