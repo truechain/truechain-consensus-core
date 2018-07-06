@@ -18,6 +18,7 @@ package pbftserver
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -29,7 +30,6 @@ import (
 	pb "pbft-core/fastchain"
 
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
@@ -113,6 +113,9 @@ func BuildServer(cfg pbft.Config, IP string, Port int, GrpcPort int, me int) *Pb
 	sv.Cfg = &cfg
 	sv.TxnPool = make(chan pb.Transaction)
 
+	genesisBlock := pbft.GetDefaultGenesisBlock()
+	fmt.Printf("Genesis block generated: %x\n\n", genesisBlock.Header.TxnsHash)
+
 	blockTxnChan := make(chan pb.Transaction, cfg.Blocksize)
 	go func(blockTxnChan chan pb.Transaction) {
 		for {
@@ -145,7 +148,7 @@ func BuildServer(cfg pbft.Config, IP string, Port int, GrpcPort int, me int) *Pb
 	go func(aC chan pbft.ApplyMsg) {
 		for {
 			c := <-aC
-			//pbft.MyPrint(4, "[0.0.0.0:%d] [%d] New Sequence Item: %v\n", sv.Port, me, c)
+			pbft.MyPrint(4, "[0.0.0.0:%d] [%d] New Sequence Item: %v\n", sv.Port, me, c)
 			sv.Out <- c
 		}
 	}(applyChan)

@@ -59,7 +59,7 @@ func main() {
 	cfg.GenerateKeysToFile(cfg.NumKeys)
 	StartPbftServers()
 
-	finish := make(chan bool)
+	/*finish := make(chan bool)
 	for i := 0; i < cfg.N; i++ {
 		go func(ind int) {
 			for {
@@ -72,7 +72,7 @@ func main() {
 
 		}(i)
 	}
-	<-finish
+	<-finish*/
 
 	// Use the main goroutine as signal handling loop
 	sigCh := make(chan os.Signal)
