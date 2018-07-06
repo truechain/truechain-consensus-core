@@ -58,16 +58,16 @@ message PbftBlockHeader {
 }
 
 message PbftBlock {
-    PbftBlockHeader             header  = 1;
-    repeated Transaction        txns    = 2;
-    repeated string             signs   = 3;   
+    PbftBlockHeader             Header  = 1;
+    repeated Transaction        Txns    = 2;
+    repeated string             Signs   = 3;
 }
 
 message TrueChain {
-        repeated PbftBlock blocks       = 1;
-        PbftBlockHeader lastheader      = 2;
+        repeated PbftBlock Blocks       = 1;
+        PbftBlockHeader LastBlockHeader = 2;
 }
 
 message GenericResp {
-        string msg = 1;
+        string Msg = 1;
 }

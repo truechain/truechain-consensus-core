@@ -17,26 +17,30 @@ limitations under the License.
 package pbft
 
 import (
-	"strconv"
 	"time"
 
 	pb "pbft-core/fastchain"
 )
 
-// Get a default genesis block
-func GetDefaultGenesisBlock() *pb.PbftBlock {
-	txns := make([]*pb.Transaction, 0)
-	genesisBlock := &pb.PbftBlock{}
-	genesisBlockHeader := &pb.PbftBlockHeader{
-		Number:     0,
-		GasLimit:   5000,
-		GasUsed:    0,
+// Creates and returns a new block header
+func NewPbftBlockHeader(n, gasLimit, gasUsed int64, parentHash, txnsHash []byte) *pb.PbftBlockHeader {
+	header := &pb.PbftBlockHeader{
+		Number:     n,
+		GasLimit:   gasLimit,
+		GasUsed:    gasUsed,
 		Timestamp:  time.Now().Unix(),
-		ParentHash: []byte(strconv.FormatInt(0, 16)),
-		TxnsHash:   HashTxns(txns),
+		ParentHash: parentHash,
+		TxnsHash:   txnsHash,
 	}
 
-	genesisBlock.Header = genesisBlockHeader
+	return header
+}
 
-	return genesisBlock
+// Creates and returns a new block
+func NewPbftBlock(header *pb.PbftBlockHeader, txns []*pb.Transaction) *pb.PbftBlock {
+	block := &pb.PbftBlock{}
+	block.Header = header
+	block.Txns = txns
+
+	return block
 }
