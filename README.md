@@ -9,43 +9,46 @@ Although there exists a bunch of existing PBFT implementations, we decide to wri
 
 
 
-### Installation
+### Build
 
 #### Step 1
 
 Install [Docker](https://docs.docker.com/install/) and [HyperMake](http://evo-cloud.github.io/hmake/quickguide/install/).
 
-Make sure you have hmake in your `$GOBIN` path.
 
-### Step 2
+#### Step 2
 
+check hmake command options
 ```
-go get -u github.com/truechain/truechain-consensus-core
-```
-
-### Step 3
-
-Make sure you have `$GOBIN` in `$PATH`:
-
-```
-export GOBIN=$GOPATH/bin
-export PATH=$PATH:$GOBIN
+git clone https://github.com/truechain/truechain-consensus-core.git
+cd truechain-consensus-core
+git checkout devel
+hmake --targets
 ```
 
-Then,
+#### Step 3
 
 ```
-cd $GOPATH/src/github.com/truechain/truechain-consensus-core
-hmake
-cp bin/{linux/darwin}/truechain-engine $GOBIN/
+hmake build
 ```
 
-### Run
+The first time, it would download:
 
-Populate a sample `~/hosts` file with repetitive 5-6 lines containing loopback IP address `127.0.0.1`. 
+- TrueChain's docker image `go-toolchain` from https://hub.docker.com/r/truechain/go-toolchain/
+- Dependencies managerment as per `src/vendor/manifest`, which again, could be generated using `gvt fetch` 
+   please note that if you need to add package, you could run `gvt fetch` first, then merge the file into `src/vendor/manifest` 
+
+Then, you will get bin/{linux/darwin}/truechain-engine
+
+### Installation && Run
+
+Populate the `/etc/hosts` file with repetitive 5-6 lines containing loopback IP address `127.0.0.1`. 
+
+The entry should look like:
+        "127.0.0.1  localhost"
 
 ```
-$ truechain-engine
+$ ./bin/{linux/darwin}/truechain-engine
 ```
 
 This triggers both server and client subroutines. Also displays progress of key signing, data exchange and ledger log.
@@ -65,47 +68,10 @@ fetching file:  sign3.pub
 <snip>
 ```
 
-### Build
-
-In case you have a new dependency that's not listed in `src/vendor/manifest` folder, just run this from `src/`:
-
+### CI
 ```
-gvt fetch github.com/fatih/color
+$ hmake build check test
 ```
-
-This would add a folder `src/vendor` if not already present, and would also generate/append to `src/vendor/manifest`.
-
-#### Building it all with hmake and docker
-
-This project uses:
-
-- [HyperMake](https://github.com/evo-cloud/hmake) to interact with toolchain (containerized environment) and build cross-platform binaries.
-- `gvt` to manage dependencies.
-
-
-```
-$ hmake --targets
-$ hmake check
-$ hmake build
-```
-
-The first time, it would download:
-
-- TrueChain's docker image `go-toolchain` from https://hub.docker.com/r/truechain/go-toolchain/
-- Dependencies as per `src/vendor/manifest`, which again, could be generated using [gvt](https://github.com/FiloSottile/gvt).
-
-The binaries would be available in `bin/`'s platform-specific folders.
-
-#### Building it all with a shell script
-
-Additionally, you could choose to build without using containers. For a very basic sanity test, run the following:
-
-```
-./support/scripts/build.sh {linux/darwin}
-```
-
-Note: you could also use `darwin` as an argument to build.sh instead of `linux` to get an OSX binary. Support for more will be extended soon.
-
 
 ### Deployment
 
@@ -117,7 +83,8 @@ To be added.
 
 ### How to contribute
 
-We need contributions from you. You are welcome to create github issues and contribute to the codebase. Developer Guide could be found in `docs/DEV.md`.
+We need contributions from you. You are welcome to create github issues and contribute to the codebase. Developer Guide could be found in `docs/DEV.md`. 
+
 We have a list of important tasks from Foundation. We welcome people who have related background to join our consensus design and implementation.
 
 
