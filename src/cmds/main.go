@@ -27,6 +27,9 @@ import (
 
 func main() {
 
+	// initial root logger
+	pbft.InitRootLoger()
+
 	cfg := pbft.Config{}
 	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts") // TODO: read from config.yaml in future.
 	cfg.IPList, cfg.Ports = pbft.GetIPConfigs(cfg.HostsFile)
