@@ -82,13 +82,13 @@ func (cl *Client) addSig(txnData *pb.TxnData) {
 }
 
 // NewRequest takes in a message and timestamp as params for a new request from client
-func (cl *Client) NewRequest(msg string, timeStamp int64) {
+func (cl *Client) NewRequest(msg string, k int, timeStamp int64) {
 	//broadcast the request
 	for i := 0; i < cfg.N; i++ {
 		txnreq := &pb.Transaction{
 			Data: &pb.TxnData{
-				AccountNonce: 0,
-				Price:        0,
+				AccountNonce: uint64(k),
+				Price:        int64(k),
 				GasLimit:     0,
 				Recipient:    []byte(""),
 				Amount:       0,
@@ -112,7 +112,6 @@ func (cl *Client) NewRequest(msg string, timeStamp int64) {
 
 		fmt.Printf("%s\n", resp.Msg)
 		conn.Close()
-		break
 	}
 }
 
@@ -125,7 +124,7 @@ func main() {
 
 	start := time.Now()
 	for k := 0; k < cfg.NumQuest; k++ {
-		cl.NewRequest("Request "+strconv.Itoa(k), time.Now().Unix()) // A random string Request{1,2,3,4....}
+		cl.NewRequest("Request "+strconv.Itoa(k), k, time.Now().Unix()) // Transaction request where nonce = gasPrice = k
 	}
 
 	fmt.Println("Finish sending the requests.")
