@@ -55,6 +55,10 @@ func StartPbftServers() {
 }
 
 func main() {
+
+	// initial the root logger
+	pbft.InitRootLoger()
+
 	cfg.LoadPbftSimConfig()
 	cfg.GenerateKeysToFile(cfg.NumKeys)
 	StartPbftServers()
