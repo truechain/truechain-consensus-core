@@ -129,20 +129,6 @@ func main() {
 
 	fmt.Println("Finish sending the requests.")
 
-	/*finish := make(chan bool)
-	for i := 0; i < cfg.N; i++ {
-		go func(ind int) {
-			for {
-				// place where channel data is extracted out of Node's channel context
-				c := <-svList[ind].Out
-				if c.Index == cfg.NumQuest {
-					finish <- true
-				}
-			}
-
-		}(i)
-	}
-	<-finish*/
 	elapsed := time.Since(start)
 	fmt.Println("Test finished. Time cost:", elapsed)
 }

@@ -212,6 +212,8 @@ type Node struct {
 	clientMessageLog map[clientMessageLogItem]Request
 	// nodeMessageLog	map[string](map[int](map[int]Request))
 
+	CommittedBlock chan *pb.PbftBlock
+
 	/// apply channel
 
 	applyCh chan ApplyMsg // Make sure that the client keeps getting the content out of applyCh
@@ -484,14 +486,14 @@ func (nd *Node) ProxyNewClientRequest(arg ProxyNewClientRequestArg, reply *Proxy
 
 // ProxyProcessPrepare trigger Prepare phase of PBFT
 func (nd *Node) ProxyProcessPrepare(arg ProxyProcessPrepareArg, reply *ProxyProcessPrepareReply) error {
-	MyPrint(2, "[%d] ProxyProcessPrepare %v\n", nd.ID, arg)
+	MyPrint(2, "[%d] ProxyProcessPrepare %v\n", nd.ID, arg.Req.Inner.Block.Header.Number)
 	nd.processPrepare(arg.Req, arg.ClientID) // we don't have return value here
 	return nil
 }
 
 // ProxyProcessCommit trigger Commit phase of PBFT
 func (nd *Node) ProxyProcessCommit(arg ProxyProcessCommitArg, reply *ProxyProcessCommitReply) error {
-	MyPrint(2, "[%d] ProxyProcessCommit %v\n", nd.ID, arg)
+	MyPrint(2, "[%d] ProxyProcessCommit %v\n", nd.ID, arg.Req.Inner.Block.Header.Number)
 	nd.processCommit(arg.Req) // we don't have return value here
 	return nil
 }
@@ -672,22 +674,26 @@ func (nd *Node) NewClientRequest(req Request, clientID int) { // TODO: change to
 			return
 		}
 	}
-	MyPrint(2, "[%d] Received request from client: %v.\n", nd.ID, req)
-	// TODO: do we need to verify client's request?
+
 	nd.mu.Lock()
 	if !nd.viewInUse {
 		nd.mu.Unlock()
 		return
 	}
 	nd.addClientLog(req)
+
+	// Setup timer to track timeout on request
 	reqTimer := time.NewTimer(time.Duration(nd.timeout) * time.Second)
 	go func(t *time.Timer, r Request) {
 		<-reqTimer.C
 		nd.handleTimeout(req.Dig, req.Inner.View)
 	}(reqTimer, req)
+
+	// Add this request to map keeping track of currently active requests
 	nd.active[req.Dig] = ActiveItem{&req, reqTimer, clientID}
 	nd.mu.Unlock()
 
+	// If node is primary replica broadcast request to other pbft nodes
 	if nd.Primary == nd.ID {
 		MyPrint(2, "[%d] Leader acked: %v.\n", nd.ID, req)
 		nd.seq = nd.seq + 1
@@ -794,10 +800,12 @@ func (nd *Node) processPrePrepare(req Request, clientID int) {
 
 	if _, ok := nd.active[DigType(req.Inner.Msg)]; !ok {
 		reqTimer := time.NewTimer(time.Duration(nd.timeout) * time.Second)
+
 		go func(t *time.Timer, r Request) {
 			<-reqTimer.C
 			nd.handleTimeout(DigType(req.Inner.Msg), req.Inner.View)
 		}(reqTimer, req)
+
 		nd.mu.Lock()
 		nd.active[DigType(req.Inner.Msg)] = ActiveItem{&req, reqTimer, clientID}
 		nd.mu.Unlock()
@@ -877,7 +885,8 @@ func (nd *Node) processCommit(req Request) {
 	nd.addNodeHistory(req)
 	nd.incCommDict(DigType(req.Inner.Msg))
 	if nd.checkCommittedMargin(DigType(req.Inner.Msg), req) {
-		MyPrint(2, "[%d] Committed %v\n", nd.ID, req)
+		nd.CommittedBlock <- req.Inner.Block
+		MyPrint(2, "[%d] Committed %v\n", nd.ID, req.Inner.Block.Header.Number)
 		nd.record("COMMITTED seq number " + strconv.Itoa(req.Inner.Seq))
 		nd.recordPBFTCommit(req)
 		nd.executeInOrder(req)
@@ -1221,6 +1230,10 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequ
 	MyPrint(2, "Initial Config %v\n", nd)
 	nd.cfg.LD = path.Join(GetCWD(), "logs/")
 	// kfpath := path.Join(cfg.KD, filename)
+
+	// Buffered channel of size 1 contains the newly committed block to be added to
+	// the blockchain by pbft-server
+	nd.CommittedBlock = make(chan *pb.PbftBlock, 1)
 
 	MakeDirIfNot(nd.cfg.LD) //handles 'already exists'
 	fi, err := os.Create(path.Join(nd.cfg.LD, "PBFTLog"+strconv.Itoa(nd.ID)+".txt"))

@@ -90,7 +90,7 @@ func (sv *PbftServer) createInternalPbftReq(proposedBlock *pb.PbftBlock) pbft.Re
 // NewTrueChain creates a fresh blockchain
 func (sv *PbftServer) NewTrueChain() {
 	genesisBlock := pbft.GetDefaultGenesisBlock()
-	fmt.Printf("Genesis block generated: %x\n\n", genesisBlock.Header.TxnsHash)
+	pbft.MyPrint(0, "Genesis block generated: %x\n\n", genesisBlock.Header.TxnsHash)
 
 	tc := &pb.TrueChain{}
 
@@ -101,10 +101,10 @@ func (sv *PbftServer) NewTrueChain() {
 	sv.Tc = tc
 }
 
-/*
-func (sv *PbftServer) AddBlock(txns []*pb.Transaction, gasUsed int64) {
+func (sv *PbftServer) AppendBlock(block *pb.PbftBlock) {
 	sv.Tc.Blocks = append(sv.Tc.Blocks, block)
-}*/
+	sv.Tc.LastBlockHeader = block.Header
+}
 
 func (sv *PbftServer) addToTxnPool(txn pb.Transaction) {
 	sv.TxnPool <- txn
@@ -151,7 +151,13 @@ func BuildServer(cfg pbft.Config, IP string, port int, grpcPort int, me int) *Pb
 
 	sv.NewTrueChain()
 
+	//if sv.Nd.ID == sv.Nd.Primary {
+	// If this is a primary replica/leader extract txns from txnpool
+	// in batches, create blocks and broadcast to other nodes
 	blockTxnChan := make(chan pb.Transaction, cfg.Blocksize)
+
+	// This goroutine keeps extracting transactions from txnpool
+	// and adds it to buffered channel of length block-size
 	go func(blockTxnChan chan pb.Transaction) {
 		for {
 			txn := <-sv.TxnPool
@@ -159,6 +165,13 @@ func BuildServer(cfg pbft.Config, IP string, port int, grpcPort int, me int) *Pb
 		}
 	}(blockTxnChan)
 
+	// This ensures that new block isn't sent through pbft phases unless the current block has been committed
+	// TODO use wg.WaitGroup() in the future
+	committed := make(chan bool, 1)
+	committed <- true
+
+	// This go routine creates the slices of block-size length and creates the block
+	// for broadcasting once the previous block has been committed
 	go func() {
 		for {
 			blockTxns := make([]*pb.Transaction, 0)
@@ -167,7 +180,7 @@ func BuildServer(cfg pbft.Config, IP string, port int, grpcPort int, me int) *Pb
 			for i := 0; i <= cfg.Blocksize; i++ {
 				txn := <-blockTxnChan
 				blockTxns = append(blockTxns, &txn)
-				fmt.Println("Adding transaction request %s to block", string(txn.Data.Payload))
+				pbft.MyPrint(1, "Adding transaction request %s to block", string(txn.Data.Payload))
 				gasUsed = gasUsed + txn.Data.Price
 			}
 			parentHash := pbft.HashBlockHeader(sv.Tc.LastBlockHeader)
@@ -176,16 +189,21 @@ func BuildServer(cfg pbft.Config, IP string, port int, grpcPort int, me int) *Pb
 
 			block := pbft.NewPbftBlock(header, blockTxns)
 
+			<-committed
 			req := sv.createInternalPbftReq(block)
 			sv.Nd.NewClientRequest(req, cfg.N)
 		}
 	}()
+	//}
 
 	go func(aC chan pbft.ApplyMsg) {
 		for {
 			c := <-aC
 			pbft.MyPrint(4, "[0.0.0.0:%d] [%d] New Sequence Item: %v\n", sv.Port, me, c)
 			sv.Out <- c
+			block := <-sv.Nd.CommittedBlock
+			sv.AppendBlock(block)
+			committed <- true
 		}
 	}(applyChan)
 
