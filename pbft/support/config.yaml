@@ -1,0 +1,25 @@
+---
+basePort: 49500
+grpcBasePort: 10000
+maxFail: 1
+torSocksPortRange:
+  - 9050
+  - 9150
+bftcommittee:
+  actualDelta: 0
+  csize: 0
+  delta: 1
+  lambda: 1
+  tbft: 1
+  th: 10
+  timeout: 300
+slowchain:
+  csize: 0
+testbedconfig:
+  clientID: 5
+  initServerID: 4
+  requests:
+    batchSize: 32
+    max: 256
+  threadingEnabled: true
+  total: 5
