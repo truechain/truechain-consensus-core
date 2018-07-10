@@ -1,5 +1,17 @@
 # Developer Guide
 
+```
+Usage of ./bin/linux/truechain-engine:
+  -numquest int
+    	number of requests (default 10)
+
+# build
+hmake build-linux
+
+# run once for 100 requests
+./bin/linux/truechain-engine --numquest 100
+```
+
 ## Development environment setup
 
 To be added
@@ -12,14 +24,22 @@ rm -rf keys/ logs/* && hmake build-linux && script -q -c './bin/linux/truechain-
 
 # view output (interpreted as binary by Linux, but it's really a color coded log file, dumped by tricking stdout as terminal session)
 cat logs/complete_log.txt  | tr -d '\000' | grep New
-
-# or with less
-less -R logs/complete_log.txt
 ```
 
-we use `script` while executing the binary and `tr` while reading from it, so we're able to see colors in log file.
-`grep` mistakes it for a binary by default.
+### Ways to automate while debugging..
 
+```
+# run for incremental request counts each time
+for i in {1..50}; do script -q -c './bin/linux/truechain-engine --numquest '$i' 2>&1' > logs/complete_log && tail logs/complete_log && cat logs/complete_log  | tr -d '\000' | grep REQUEST; done
+
+# or if you'd like to see outputs from same 
+for i in {1..10}; do script -q -c './bin/linux/truechain-engine --numquest 17 2>&1' > logs/complete_log && tail logs/complete_log; done
+
+# or with less
+less -R logs/complete_log
+```
+
+we use `script` while executing the binary and `tr` while reading from it, so we're able to see colors in log file. `grep` mistakes it for a binary by default.
 
 ## Debugging
 
