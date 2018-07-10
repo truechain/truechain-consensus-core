@@ -20,6 +20,9 @@ The project follows the typical GitHub pull request model.
 See [CONTRIBUTIONS.md](CONTRIBUTIONS.md) for more details.
 Before starting any work, please either comment on an existing issue, or file a new one.
 
+Track our [Milestones here](https://github.com/truechain/truechain-consensus-core/milestones/)
+And for different codebases of truechain engineering, [here's an explanation](https://github.com/truechain/truechain-consensus-core/milestone/2)
+
 ## Community / Mailing lists
 
 Join our gitter channel for live discussions and clarifications.
