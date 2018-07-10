@@ -1,9 +1,9 @@
 # truechain-consensus-core
 TrueChain Consensus Protocol
 
-## Guide
+## Building the source
 
-For pbft specific installation, checkout `pbft/` folder
+For pbft specific installation and execution, checkout `pbft/` folder
 
 ## Feedback
 
@@ -31,6 +31,13 @@ Join our gitter channel for live discussions and clarifications.
 
 Subscribe to the [google groups mailing list](https://groups.google.com/forum/#!forum/truechain) to receive regular updates and post discussions 
 
+### On Social Media
+
+- Main site: https://www.truechain.pro/en/
+  - News from Truechain https://www.truechain.pro/en/news
+- Twitter: https://twitter.com/truechaingroup
+- Facebook: https://www.facebook.com/TrueChaingroup/
+- Telegram: http://www.t.me/truechainglobal/
 
 ## LICENSE
 
