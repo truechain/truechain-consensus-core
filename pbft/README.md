@@ -7,8 +7,6 @@ This code base is an ongoing implementation of Practical Byzantine Fault Toleran
 
 Although there exists a bunch of existing PBFT implementations, we decide to write our own version to get fully control of every details and to conveniently make necessary extensions so that it could fit into the hybrid consensus protocol (which requires more than a standard PBFT).
 
-
-
 ### Installation
 
 #### Step 1
@@ -114,15 +112,3 @@ To be added.
 ### Benchmark
 
 To be added.
-
-### How to contribute
-
-We need contributions from you. You are welcome to create github issues and contribute to the codebase. Developer Guide could be found in `docs/DEV.md`.
-We have a list of important tasks from Foundation. We welcome people who have related background to join our consensus design and implementation.
-
-
-### LICENSE
-
-The Apache License (2.0).
-
-A copy of the header is included within all files in the codebase along with the full LICENSE txt file in project's root folder.
