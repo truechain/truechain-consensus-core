@@ -14,14 +14,6 @@ targets:
   toolchain:
       description: toolchain dependencies
 
-  deps-restore:
-    description: forced fetch of deps, in case vendor/ folder has been cleaned
-    watches:
-      - src/vendor/github.com/*
-    workdir: src
-    cmds:
-      - gvt restore
-
   deps:
     description: populate deps packages
     after:
@@ -43,18 +35,6 @@ targets:
       - ./support/scripts/build.sh linux
     artifacts:
       - bin/linux/truechain-engine
-
-  build-darwin:
-    description: build Go source code for darwin
-    after:
-      - deps
-    watches:
-      - src/**/**/*.go
-      - support/scripts/build.sh
-    cmds:
-      - ./support/scripts/build.sh darwin
-    artifacts:
-      - bin/darwin/truechain-engine
 
   build:
     description: build binaries
@@ -100,7 +80,7 @@ settings:
     - build
     - check
 
-  exec-target: vendor
+  exec-target: deps
   exec-shell: /bin/bash
   docker:
     image: 'truechain/go-toolchain:1.10.0'
