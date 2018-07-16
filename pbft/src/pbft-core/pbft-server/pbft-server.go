@@ -18,6 +18,7 @@ package pbftserver
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -29,7 +30,6 @@ import (
 	pb "pbft-core/fastchain"
 
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
@@ -41,6 +41,7 @@ type PbftServer struct {
 	Cfg     *pbft.Config
 	Out     chan pbft.ApplyMsg
 	TxnPool chan pb.Transaction
+	Tc      *pb.TrueChain
 }
 
 type fastChainServer struct {
@@ -86,6 +87,25 @@ func (sv *PbftServer) createInternalPbftReq(proposedBlock *pb.PbftBlock) pbft.Re
 	return req
 }
 
+// NewTrueChain creates a fresh blockchain
+func (sv *PbftServer) NewTrueChain() {
+	genesisBlock := pbft.GetDefaultGenesisBlock()
+	fmt.Printf("Genesis block generated: %x\n\n", genesisBlock.Header.TxnsHash)
+
+	tc := &pb.TrueChain{}
+
+	tc.Blocks = make([]*pb.PbftBlock, 0)
+	tc.Blocks = append(tc.Blocks, genesisBlock)
+	tc.LastBlockHeader = genesisBlock.Header
+
+	sv.Tc = tc
+}
+
+/*
+func (sv *PbftServer) AddBlock(txns []*pb.Transaction, gasUsed int64) {
+	sv.Tc.Blocks = append(sv.Tc.Blocks, block)
+}*/
+
 func (sv *PbftServer) addToTxnPool(txn pb.Transaction) {
 	sv.TxnPool <- txn
 }
@@ -100,18 +120,36 @@ func (sv *fastChainServer) NewTxnRequest(ctx context.Context, txnReq *pb.Transac
 	}
 
 	sv.pbftSv.addToTxnPool(*txnReq)
-	return &pb.GenericResp{Msg: "Transaction request received"}, nil
+	return &pb.GenericResp{Msg: fmt.Sprintf("Transaction request received in node %d\n", sv.pbftSv.Nd.ID)}, nil
+}
+
+// RegisterPbftGrpcListener listens to client for new transaction requests on grpcPort
+func RegisterPbftGrpcListener(grpcPort int, sv *PbftServer) {
+	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", grpcPort))
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	grpcServer := grpc.NewServer()
+	pb.RegisterFastChainServer(grpcServer, &fastChainServer{pbftSv: sv})
+	go grpcServer.Serve(lis)
 }
 
 // BuildServer initiates the Server resource properties and listens to client's
 // message requests as well as interacts with the channel
-func BuildServer(cfg pbft.Config, IP string, Port int, GrpcPort int, me int) *PbftServer {
+func BuildServer(cfg pbft.Config, IP string, port int, grpcPort int, me int) *PbftServer {
 	sv := &PbftServer{}
 	sv.IP = IP
-	sv.Port = Port
+	sv.Port = port
 	sv.Out = make(chan pbft.ApplyMsg, cfg.NumQuest)
 	sv.Cfg = &cfg
 	sv.TxnPool = make(chan pb.Transaction)
+
+	applyChan := make(chan pbft.ApplyMsg, cfg.NumQuest)
+	sv.Nd = pbft.Make(cfg, me, port, 0, applyChan, 100) // test 100 messages
+
+	RegisterPbftGrpcListener(grpcPort, sv)
+
+	sv.NewTrueChain()
 
 	blockTxnChan := make(chan pb.Transaction, cfg.Blocksize)
 	go func(blockTxnChan chan pb.Transaction) {
@@ -124,40 +162,32 @@ func BuildServer(cfg pbft.Config, IP string, Port int, GrpcPort int, me int) *Pb
 	go func() {
 		for {
 			blockTxns := make([]*pb.Transaction, 0)
+			var gasUsed int64
+			gasUsed = 0
 			for i := 0; i <= cfg.Blocksize; i++ {
 				txn := <-blockTxnChan
 				blockTxns = append(blockTxns, &txn)
 				fmt.Println("Adding transaction request %s to block", string(txn.Data.Payload))
+				gasUsed = gasUsed + txn.Data.Price
 			}
+			parentHash := pbft.HashBlockHeader(sv.Tc.LastBlockHeader)
+			txnsHash := pbft.HashTxns(blockTxns)
+			header := pbft.NewPbftBlockHeader(sv.Tc.LastBlockHeader.Number+1, 5000, int64(gasUsed), parentHash, txnsHash)
 
-			pbftBlock := pb.PbftBlock{}
-			pbftBlock.Header = &pb.PbftBlockHeader{}
-			pbftBlock.Txns = blockTxns
-			fmt.Println("Block created")
+			block := pbft.NewPbftBlock(header, blockTxns)
 
-			req := sv.createInternalPbftReq(&pbftBlock)
+			req := sv.createInternalPbftReq(block)
 			sv.Nd.NewClientRequest(req, cfg.N)
 		}
 	}()
 
-	applyChan := make(chan pbft.ApplyMsg, cfg.NumQuest)
-
 	go func(aC chan pbft.ApplyMsg) {
 		for {
 			c := <-aC
-			//pbft.MyPrint(4, "[0.0.0.0:%d] [%d] New Sequence Item: %v\n", sv.Port, me, c)
+			pbft.MyPrint(4, "[0.0.0.0:%d] [%d] New Sequence Item: %v\n", sv.Port, me, c)
 			sv.Out <- c
 		}
 	}(applyChan)
-	sv.Nd = pbft.Make(cfg, me, Port, 0, applyChan, 100) // test 100 messages
-
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", GrpcPort))
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	grpcServer := grpc.NewServer()
-	pb.RegisterFastChainServer(grpcServer, &fastChainServer{pbftSv: sv})
-	go grpcServer.Serve(lis)
 
 	go sv.Start() // in case the server has some initial logic
 	return sv

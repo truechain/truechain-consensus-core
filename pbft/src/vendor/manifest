@@ -240,12 +240,48 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/ethereum/go-ethereum/ethdb",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "3b0745156428376e4ca4ae0449db5864e672bc3b",
+			"branch": "master",
+			"path": "ethdb",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/log",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "3b0745156428376e4ca4ae0449db5864e672bc3b",
+			"branch": "master",
+			"path": "log",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/metrics",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "3b0745156428376e4ca4ae0449db5864e672bc3b",
+			"branch": "master",
+			"path": "metrics",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/ethereum/go-ethereum/rlp",
 			"repository": "https://github.com/ethereum/go-ethereum",
 			"vcs": "git",
 			"revision": "eaff89291ce998ba4bf9b9816ca8a15c8b85f440",
 			"branch": "master",
 			"path": "rlp",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/trie",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "3b0745156428376e4ca4ae0449db5864e672bc3b",
+			"branch": "master",
+			"path": "/trie",
 			"notests": true
 		},
 		{
@@ -264,6 +300,78 @@
 			"revision": "eaff89291ce998ba4bf9b9816ca8a15c8b85f440",
 			"branch": "master",
 			"path": "vendor/github.com/btcsuite/btcd/btcec",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/vendor/github.com/go-stack/stack",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "3b0745156428376e4ca4ae0449db5864e672bc3b",
+			"branch": "master",
+			"path": "vendor/github.com/go-stack/stack",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/vendor/github.com/golang/snappy",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "3b0745156428376e4ca4ae0449db5864e672bc3b",
+			"branch": "master",
+			"path": "vendor/github.com/golang/snappy",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/vendor/github.com/influxdata/influxdb/client",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "3b0745156428376e4ca4ae0449db5864e672bc3b",
+			"branch": "master",
+			"path": "vendor/github.com/influxdata/influxdb/client",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/vendor/github.com/influxdata/influxdb/models",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "3b0745156428376e4ca4ae0449db5864e672bc3b",
+			"branch": "master",
+			"path": "vendor/github.com/influxdata/influxdb/models",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/vendor/github.com/influxdata/influxdb/pkg/escape",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "3b0745156428376e4ca4ae0449db5864e672bc3b",
+			"branch": "master",
+			"path": "vendor/github.com/influxdata/influxdb/pkg/escape",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/vendor/github.com/syndtr/goleveldb/leveldb",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "3b0745156428376e4ca4ae0449db5864e672bc3b",
+			"branch": "master",
+			"path": "vendor/github.com/syndtr/goleveldb/leveldb",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/vendor/golang.org/x/sys/unix",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "3b0745156428376e4ca4ae0449db5864e672bc3b",
+			"branch": "master",
+			"path": "vendor/golang.org/x/sys/unix",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ethereum/go-ethereum/vendor/gopkg.in/karalabe/cookiejar.v2/collections/prque",
+			"repository": "https://github.com/ethereum/go-ethereum",
+			"vcs": "git",
+			"revision": "3b0745156428376e4ca4ae0449db5864e672bc3b",
+			"branch": "master",
+			"path": "vendor/gopkg.in/karalabe/cookiejar.v2/collections/prque",
 			"notests": true
 		},
 		{
