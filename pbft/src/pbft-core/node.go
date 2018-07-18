@@ -216,7 +216,7 @@ type Node struct {
 
 	/// apply channel
 
-	applyCh chan ApplyMsg // Make sure that the client keeps getting the content out of applyCh
+	ApplyCh chan ApplyMsg // Make sure that the client keeps getting the content out of applyCh
 }
 
 type reqCounter struct {
@@ -328,7 +328,7 @@ func (nd *Node) resetMsgDicts() {
 func (nd *Node) execute(am ApplyMsg) {
 	// TODO: add msg to applyCh, should be executed in a separate go routine
 	// TODO: add we probably want to keep a log for this
-	nd.applyCh <- am
+	nd.ApplyCh <- am
 }
 
 func (nd *Node) suicide() {
@@ -702,6 +702,7 @@ func (nd *Node) NewClientRequest(req Request, clientID int) { // TODO: change to
 		// write log
 		nd.broadcast(m) // TODO: broadcast pre-prepare RPC path.
 	}
+	MyPrint(4, "Arrving somewhere and that is here!!")
 }
 
 func (nd *Node) initializeKeys() {
@@ -1221,7 +1222,7 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequ
 	nd.killFlag = false
 	nd.ID = me
 	nd.active = make(map[DigType]ActiveItem)
-	nd.applyCh = applyCh
+	nd.ApplyCh = applyCh
 	nd.prepDict = make(map[DigType]reqCounter)
 	nd.commDict = make(map[DigType]reqCounter)
 	nd.nodeMessageLog = nodeMsgLog{}

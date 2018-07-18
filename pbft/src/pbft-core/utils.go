@@ -46,19 +46,19 @@ func MyPrint(t int, format string, args ...interface{}) {
 
 		switch t {
 		case 0: // info
-			fmt.Printf("[ ]"+format, args...)
+			fmt.Printf("[ ]"+format+"\n", args...)
 			break
 		case 1: // emphasized
-			fmt.Printf(blue("[.]")+format, args...)
+			fmt.Printf(blue("[.]")+format+"\n", args...)
 			break
 		case 2: // warning
-			fmt.Printf(yellow("[!]")+format, args...)
+			fmt.Printf(yellow("[!]")+format+"\n", args...)
 			break
 		case 3: // error
-			fmt.Printf(red("[x]")+format, args...)
+			fmt.Printf(red("[x]")+format+"\n", args...)
 			break
 		case 4: // magical shit
-			fmt.Printf(deepPurple("[x]")+format, args...)
+			fmt.Printf(deepPurple("[?]")+format+"\n", args...)
 		}
 	}
 }

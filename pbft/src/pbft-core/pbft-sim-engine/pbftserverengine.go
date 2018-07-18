@@ -63,21 +63,6 @@ func main() {
 	cfg.GenerateKeysToFile(cfg.NumKeys)
 	StartPbftServers()
 
-	/*finish := make(chan bool)
-	for i := 0; i < cfg.N; i++ {
-		go func(ind int) {
-			for {
-				// place where channel data is extracted out of Node's channel context
-				c := <-svList[ind].Out
-				if c.Index == cfg.NumQuest {
-					finish <- true
-				}
-			}
-
-		}(i)
-	}
-	<-finish*/
-
 	// Use the main goroutine as signal handling loop
 	sigCh := make(chan os.Signal)
 	signal.Notify(sigCh)
