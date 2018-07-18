@@ -1,6 +1,8 @@
 # truechain-consensus-core
 TrueChain Consensus Protocol
 
+[![Travis](https://travis-ci.com/truechain/truechain-consensus-core.svg?branch=master)](https://travis-ci.com/truechain/truechain-consensus-core)
+
 ## Building the source
 
 For pbft specific installation and execution, checkout `pbft/` folder
