@@ -32,10 +32,12 @@ import (
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 )
 
+// HashLength defines length of hashes (32 bytes)
 const HashLength = 32
 
 var hashT = reflect.TypeOf(Hash{})
 
+// Hash defines a hash of 32 bytes
 type Hash [32]byte
 
 // BytesToHash sets b to hash.
@@ -126,7 +128,7 @@ func HashTxns(txns []*pb.Transaction) []byte {
 	return trie.Hash().Bytes()
 }
 
-// HashHeader returns a hash for a block header
+// HashBlockHeader returns a hash for a block header
 func HashBlockHeader(header *pb.PbftBlockHeader) []byte {
 	headerData, _ := proto.Marshal(header)
 	return ethcrypto.Keccak256(headerData)

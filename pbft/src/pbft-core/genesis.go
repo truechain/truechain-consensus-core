@@ -23,7 +23,7 @@ import (
 	pb "pbft-core/fastchain"
 )
 
-// Get a default genesis block
+// GetDefaultGenesisBlock returns a default genesis block
 func GetDefaultGenesisBlock() *pb.PbftBlock {
 	txns := make([]*pb.Transaction, 0)
 	genesisBlock := &pb.PbftBlock{}

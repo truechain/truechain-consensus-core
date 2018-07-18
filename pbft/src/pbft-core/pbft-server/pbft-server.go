@@ -24,7 +24,6 @@ import (
 	"log"
 	"net"
 	"path"
-	"sync"
 	"time"
 
 	"pbft-core"
@@ -44,12 +43,7 @@ type PbftServer struct {
 	Tc        *pb.TrueChain
 	Genesis   *pb.PbftBlock
 	committed chan bool
-
-	TxnPool map[pbft.Hash]*txSortedMap // map sender account pubkey => txnlist
-	all     *txLookup                  // All transactions to allow lookups
-	priced  *txPricedList              // All transactions sorted by price
-	count   int
-	lock    sync.RWMutex
+	txPool    *TxPool
 }
 
 type fastChainServer struct {
@@ -108,29 +102,10 @@ func (sv *PbftServer) NewTrueChain() {
 	sv.Tc = tc
 }
 
+// AppendBlock appends a block to the blockchain
 func (sv *PbftServer) AppendBlock(block *pb.PbftBlock) {
 	sv.Tc.Blocks = append(sv.Tc.Blocks, block)
 	sv.Tc.LastBlockHeader = block.Header
-}
-
-func (sv *PbftServer) addToTxnPool(txn *pb.Transaction, sender []byte) {
-	if txmap, _ := sv.TxnPool[pbft.BytesToHash(sender)]; txmap == nil {
-		// If new sender add new sender entry to txmap
-		txmap = newTxSortedMap()
-		sv.TxnPool[pbft.BytesToHash(sender)] = txmap
-	}
-
-	sv.lock.Lock()
-
-	sv.TxnPool[pbft.BytesToHash(sender)].Put(txn)
-
-	sv.all.Add(txn)
-	sv.priced.Put(txn)
-
-	sv.count++
-	sv.lock.Unlock()
-
-	pbft.MyPrint(4, "Added request %d to transaction pool on node %d. Txn count: %d", txn.Data.AccountNonce, sv.Nd.ID, sv.count)
 }
 
 // NewTxnRequest handles transaction requests from clients
@@ -144,7 +119,9 @@ func (sv *fastChainServer) NewTxnRequest(ctx context.Context, txnReq *pb.Transac
 		return &pb.GenericResp{Msg: "Transaction verification failed"}, errors.New("Invalid transaction request")
 	}
 
-	sv.pbftSv.addToTxnPool(txnReq, sender)
+	sv.pbftSv.txPool.Add(txnReq, sender)
+	pbft.MyPrint(4, "Added request %d to transaction pool on node %d.", txnReq.Data.AccountNonce, sv.pbftSv.Nd.ID)
+
 	return &pb.GenericResp{Msg: fmt.Sprintf("Transaction request %d received in node %d\n", txnReq.Data.AccountNonce, sv.pbftSv.Nd.ID)}, nil
 }
 
@@ -164,26 +141,20 @@ func (sv *PbftServer) createBlockAndBroadcast() {
 	// for broadcasting once the previous block has been committed
 	go func() {
 		for {
-			sv.lock.RLock()
-			if sv.count < 10 {
-				sv.lock.RUnlock()
+			if sv.txPool.GetTxCount() < sv.Cfg.Blocksize {
 				continue
 			}
-			sv.lock.RUnlock()
 
 			blockTxns := make([]*pb.Transaction, 0)
 			var gasUsed int64
 			gasUsed = 0
 			for i := 0; i < sv.Cfg.Blocksize; i++ {
-				sv.lock.Lock()
-				txn := sv.priced.Get()
-				sv.all.Remove(pbft.BytesToHash(txn.Data.Hash))
+				txn := sv.txPool.priced.Get()
 				blockTxns = append(blockTxns, txn)
 				pbft.MyPrint(1, "Adding transaction request %d to block %d\n", txn.Data.AccountNonce, sv.Tc.LastBlockHeader.Number)
 				gasUsed = gasUsed + txn.Data.Price
-				sv.count--
-				sv.lock.Unlock()
-				pbft.MyPrint(4, "Transacion count is %d", sv.count)
+				sv.txPool.Remove(pbft.BytesToHash(txn.Data.Hash))
+				pbft.MyPrint(4, "Transacion count is %d", sv.txPool.GetTxCount())
 			}
 			parentHash := pbft.HashBlockHeader(sv.Tc.LastBlockHeader)
 			txnsHash := pbft.HashTxns(blockTxns)
@@ -206,14 +177,13 @@ func BuildServer(cfg pbft.Config, IP string, port int, grpcPort int, me int) *Pb
 	sv.Port = port
 	sv.Out = make(chan pbft.ApplyMsg, cfg.NumQuest)
 	sv.Cfg = &cfg
-	sv.TxnPool = make(map[pbft.Hash]*txSortedMap)
-	sv.all = newTxLookup()
-	sv.priced = newTxPricedList(sv.all)
 
 	applyChan := make(chan pbft.ApplyMsg, cfg.NumQuest)
 	sv.Nd = pbft.Make(cfg, me, port, 0, applyChan, 100) // test 100 messages
 
 	RegisterPbftGrpcListener(grpcPort, sv)
+
+	sv.txPool = newTxPool()
 
 	sv.Genesis = pbft.GetDefaultGenesisBlock()
 	pbft.MyPrint(0, "Genesis block generated: %x\n\n", sv.Genesis.Header.TxnsHash)
@@ -225,7 +195,6 @@ func BuildServer(cfg pbft.Config, IP string, port int, grpcPort int, me int) *Pb
 	sv.committed = make(chan bool, 1)
 	sv.committed <- true
 
-	sv.count = 0
 	if sv.Nd.ID == sv.Nd.Primary {
 		sv.createBlockAndBroadcast()
 	}

@@ -20,8 +20,6 @@ import (
 	"container/heap"
 	"sync"
 
-	"pbft-core"
-
 	pb "pbft-core/fastchain"
 )
 
@@ -135,60 +133,4 @@ func (l *txPricedList) Len() int {
 	defer l.lock.RUnlock()
 
 	return l.items.Len()
-}
-
-type txLookup struct {
-	all  map[pbft.Hash]*pb.Transaction
-	lock sync.RWMutex
-}
-
-// newTxLookup returns a new txLookup structure.
-func newTxLookup() *txLookup {
-	return &txLookup{
-		all: make(map[pbft.Hash]*pb.Transaction),
-	}
-}
-
-// Range calls f on each key and value present in the map.
-func (t *txLookup) Range(f func(hash pbft.Hash, tx *pb.Transaction) bool) {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
-	for key, value := range t.all {
-		if !f(key, value) {
-			break
-		}
-	}
-}
-
-// Get returns a transaction if it exists in the lookup, or nil if not found.
-func (t *txLookup) Get(hash pbft.Hash) *pb.Transaction {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
-	return t.all[hash]
-}
-
-// Count returns the current number of items in the lookup.
-func (t *txLookup) Count() int {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
-	return len(t.all)
-}
-
-// Add adds a transaction to the lookup.
-func (t *txLookup) Add(tx *pb.Transaction) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	t.all[pbft.BytesToHash(tx.Data.Hash)] = tx
-}
-
-// Remove removes a transaction from the lookup.
-func (t *txLookup) Remove(hash pbft.Hash) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	delete(t.all, hash)
 }

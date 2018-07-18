@@ -702,7 +702,6 @@ func (nd *Node) NewClientRequest(req Request, clientID int) { // TODO: change to
 		// write log
 		nd.broadcast(m) // TODO: broadcast pre-prepare RPC path.
 	}
-	MyPrint(4, "Arrving somewhere and that is here!!")
 }
 
 func (nd *Node) initializeKeys() {
