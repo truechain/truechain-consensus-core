@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"pbft-core"
-	"pbft-core/pbft-server"
 
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
@@ -38,7 +37,7 @@ import (
 
 var (
 	cfg    = pbft.Config{}
-	svList []*pbftserver.PbftServer
+	svList []*pbft.Server
 	cl     = Client{}
 )
 

@@ -14,28 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pbftserver
+package pbft
 
 import (
 	"sync"
-
-	"pbft-core"
 
 	pb "pbft-core/fastchain"
 )
 
 // TxPool defines the transaction pool
 type TxPool struct {
-	txMap  map[pbft.Hash]*txSortedMap // Map of account to transactions sorted according to account nonce
-	all    *txLookup                  // All transactions to allow lookups
-	priced *txPricedList              // All transactions sorted by price
-	count  int                        // Maintains a count of the number of transactions
+	txMap  map[Hash]*txSortedMap // Map of account to transactions sorted according to account nonce
+	all    *txLookup             // All transactions to allow lookups
+	priced *txPricedList         // All transactions sorted by price
+	count  int                   // Maintains a count of the number of transactions
 	lock   sync.RWMutex
 }
 
 func newTxPool() *TxPool {
 	txPool := &TxPool{}
-	txPool.txMap = make(map[pbft.Hash]*txSortedMap)
+	txPool.txMap = make(map[Hash]*txSortedMap)
 	txPool.all = newTxLookup()
 	txPool.priced = newTxPricedList(txPool.all)
 	txPool.count = 0
@@ -48,7 +46,7 @@ func (tp *TxPool) Add(tx *pb.Transaction, sender []byte) {
 	tp.lock.Lock()
 	defer tp.lock.Unlock()
 
-	senderHash := pbft.BytesToHash(sender)
+	senderHash := BytesToHash(sender)
 	// If new sender add new sender entry to txmap
 	if txs, _ := tp.txMap[senderHash]; txs == nil {
 		txs = newTxSortedMap()
@@ -64,7 +62,7 @@ func (tp *TxPool) Add(tx *pb.Transaction, sender []byte) {
 }
 
 // Remove removes a transaction from the transaction pool
-func (tp *TxPool) Remove(txHash pbft.Hash) {
+func (tp *TxPool) Remove(txHash Hash) {
 	tp.lock.Lock()
 	defer tp.lock.Unlock()
 
@@ -83,19 +81,19 @@ func (tp *TxPool) GetTxCount() int {
 
 // txLookup defines a sructure that enables lookup for transactions
 type txLookup struct {
-	all  map[pbft.Hash]*pb.Transaction
+	all  map[Hash]*pb.Transaction
 	lock sync.RWMutex
 }
 
 // newTxLookup returns a new txLookup structure.
 func newTxLookup() *txLookup {
 	return &txLookup{
-		all: make(map[pbft.Hash]*pb.Transaction),
+		all: make(map[Hash]*pb.Transaction),
 	}
 }
 
 // Range calls f on each key and value present in the map.
-func (t *txLookup) Range(f func(hash pbft.Hash, tx *pb.Transaction) bool) {
+func (t *txLookup) Range(f func(hash Hash, tx *pb.Transaction) bool) {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
@@ -107,7 +105,7 @@ func (t *txLookup) Range(f func(hash pbft.Hash, tx *pb.Transaction) bool) {
 }
 
 // Get returns a transaction if it exists in the lookup, or nil if not found.
-func (t *txLookup) Get(hash pbft.Hash) *pb.Transaction {
+func (t *txLookup) Get(hash Hash) *pb.Transaction {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
@@ -127,11 +125,11 @@ func (t *txLookup) Add(tx *pb.Transaction) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	t.all[pbft.BytesToHash(tx.Data.Hash)] = tx
+	t.all[BytesToHash(tx.Data.Hash)] = tx
 }
 
 // Remove removes a transaction from the lookup.
-func (t *txLookup) Remove(hash pbft.Hash) {
+func (t *txLookup) Remove(hash Hash) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 

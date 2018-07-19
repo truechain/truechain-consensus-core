@@ -23,22 +23,21 @@ import (
 	"time"
 
 	"pbft-core"
-	"pbft-core/pbft-server"
 
 	"golang.org/x/sys/unix"
 )
 
 var (
 	cfg    = pbft.Config{}
-	svList []*pbftserver.PbftServer
+	svList []*pbft.Server
 )
 
 // StartPbftServers starts PBFT servers from config information
 func StartPbftServers() {
-	svList = make([]*pbftserver.PbftServer, cfg.N)
+	svList = make([]*pbft.Server, cfg.N)
 	for i := 0; i < cfg.N; i++ {
 		fmt.Println(cfg.IPList[i], cfg.Ports[i], i)
-		svList[i] = pbftserver.BuildServer(cfg, cfg.IPList[i], cfg.Ports[i], cfg.GrpcPorts[i], i)
+		svList[i] = pbft.BuildServer(cfg, cfg.IPList[i], cfg.Ports[i], cfg.GrpcPorts[i], i)
 	}
 
 	for i := 0; i < cfg.N; i++ {
