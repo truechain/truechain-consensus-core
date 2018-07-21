@@ -217,6 +217,7 @@ type Node struct {
 	/// apply channel
 
 	ApplyCh chan ApplyMsg // Make sure that the client keeps getting the content out of applyCh
+	txPool  *TxPool
 }
 
 type reqCounter struct {
@@ -789,6 +790,56 @@ func (nd *Node) checkCommittedMargin(dig DigType, req Request) bool {
 	return false
 }
 
+// VerifyBlockTxs verifies transactions in a block by checking sender and account nonce
+func (nd *Node) VerifyBlockTxs(blk *pb.PbftBlock) bool {
+	for _, tx := range blk.Txns {
+		if _, ok := VerifySender(tx, nd.cfg.N); !ok { // Verify if tx came from client
+			return false
+		}
+
+		foundTx := make(chan *pb.Transaction, 1)
+		txInPool := make(chan bool, 1)
+		go func() {
+			// Setup timer to track timeout on transaction to appear on pool
+			timer := time.NewTimer(time.Duration(nd.timeout) * time.Second)
+			go func(t *time.Timer) {
+				<-timer.C
+				txInPool <- false
+			}(timer)
+
+			txHash := BytesToHash(tx.Data.Hash)
+			for {
+				if t := nd.txPool.Get(txHash); t != nil {
+					foundTx <- t
+					txInPool <- true
+					break
+				}
+			}
+		}()
+
+		okchan := make(chan bool, 1)
+		go func() {
+			found := <-txInPool
+			if !found {
+				okchan <- false // tx not found in txnpool after timeout
+			}
+
+			t := <-foundTx
+			if t.Data.AccountNonce != tx.Data.AccountNonce {
+				okchan <- false // tx account nonce from txPool didn't match that in block
+			}
+
+			okchan <- true
+		}()
+
+		if ok := <-okchan; !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (nd *Node) processPrePrepare(req Request, clientID int) {
 	seq := req.Inner.Seq
 	if val1, ok1 := nd.nodeMessageLog.content[typePrePrepare]; ok1 {
@@ -796,7 +847,12 @@ func (nd *Node) processPrePrepare(req Request, clientID int) {
 			return
 		}
 	}
-	// TODO: check client signature
+
+	block := req.Inner.Block
+	if !nd.VerifyBlockTxs(block) {
+		MyPrint(3, "Couldn't verify transactions in block")
+		return
+	}
 
 	if _, ok := nd.active[DigType(req.Inner.Msg)]; !ok {
 		reqTimer := time.NewTimer(time.Duration(nd.timeout) * time.Second)
@@ -1234,6 +1290,9 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg, maxRequ
 	// Buffered channel of size 1 contains the newly committed block to be added to
 	// the blockchain by pbft-server
 	nd.CommittedBlock = make(chan *pb.PbftBlock, 1)
+
+	// Create empty transaction pool
+	nd.txPool = newTxPool()
 
 	MakeDirIfNot(nd.cfg.LD) //handles 'already exists'
 	fi, err := os.Create(path.Join(nd.cfg.LD, "PBFTLog"+strconv.Itoa(nd.ID)+".txt"))
