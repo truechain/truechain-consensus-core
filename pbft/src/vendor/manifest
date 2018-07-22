@@ -119,6 +119,41 @@
 			"notests": true
 		},
 		{
+            "importpath": "github.com/sirupsen/logrus",
+            "repository": "https://github.com/sirupsen/logrus",
+            "vcs": "git",
+            "revision": "e54a77765aca7bbdd8e56c1c54f60579968b2dc9",
+            "branch": "master",
+            "notests": true
+        },
+        {
+            "importpath": "golang.org/x/crypto/ssh/terminal",
+            "repository": "https://go.googlesource.com/crypto",
+            "vcs": "git",
+            "revision": "a49355c7e3f8fe157a85be2f77e6e269a0f89602",
+            "branch": "master",
+            "path": "/ssh/terminal",
+            "notests": true
+        },
+        {
+            "importpath": "golang.org/x/sys/unix",
+            "repository": "https://go.googlesource.com/sys",
+            "vcs": "git",
+            "revision": "3c6ecd8f22c6f40fbeec94c000a069d7d87c7624",
+            "branch": "master",
+            "path": "/unix",
+            "notests": true
+        },
+        {
+            "importpath": "golang.org/x/sys/windows",
+            "repository": "https://go.googlesource.com/sys",
+            "vcs": "git",
+            "revision": "3c6ecd8f22c6f40fbeec94c000a069d7d87c7624",
+            "branch": "master",
+            "path": "windows",
+            "notests": true
+        },
+		{
 			"importpath": "git.apache.org/thrift.git/lib/go/thrift",
 			"repository": "https://git.apache.org/thrift.git",
 			"vcs": "git",
