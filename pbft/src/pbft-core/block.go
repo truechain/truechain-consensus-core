@@ -22,7 +22,7 @@ import (
 	pb "pbft-core/fastchain"
 )
 
-// Creates and returns a new block header
+// NewPbftBlockHeader creates and returns a new block header
 func NewPbftBlockHeader(n, gasLimit, gasUsed int64, parentHash, txnsHash []byte) *pb.PbftBlockHeader {
 	header := &pb.PbftBlockHeader{
 		Number:     n,
@@ -36,7 +36,7 @@ func NewPbftBlockHeader(n, gasLimit, gasUsed int64, parentHash, txnsHash []byte)
 	return header
 }
 
-// Creates and returns a new block
+// NewPbftBlock creates and returns a new block
 func NewPbftBlock(header *pb.PbftBlockHeader, txns []*pb.Transaction) *pb.PbftBlock {
 	block := &pb.PbftBlock{}
 	block.Header = header
