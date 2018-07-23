@@ -17,7 +17,7 @@ export GOPATH=$GOPATH:`pwd`:`pwd`/..
 OUTDIR="bin/$GOOS"
 mkdir -p "$OUTDIR"
 
-if [ "$GOOS" -eq "linux" ]; then
+if [ "$GOOS" = "linux" ]; then
     export CGO_ENABLED=1
 fi
 

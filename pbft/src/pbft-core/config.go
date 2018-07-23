@@ -61,7 +61,8 @@ func (cfg *Config) LoadPbftSimConfig() {
 	cfg.IPList, cfg.Ports, cfg.GrpcPorts = GetIPConfigs(cfg.HostsFile)
 	cfg.NumKeys = len(cfg.IPList)
 	cfg.N = cfg.NumKeys - 1 // we assume client count to be 1
-	cfg.NumQuest = 100
+	// Load this from commandline/set default in client.go
+	// cfg.NumQuest = 100
 	cfg.Blocksize = 10 // This is hardcoded to 10 for now
 	cfg.KD = path.Join(GetCWD(), "keys/")
 }

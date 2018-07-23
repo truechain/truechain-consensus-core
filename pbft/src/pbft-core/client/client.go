@@ -18,6 +18,7 @@ package main
 
 import (
 	"crypto/ecdsa"
+	"flag"
 	"fmt"
 	"log"
 	"path"
@@ -116,6 +117,11 @@ func (cl *Client) NewRequest(msg string, k int, timeStamp int64) {
 
 func main() {
 	cfg.LoadPbftSimConfig()
+
+	cfg.NumQuest = *flag.Int("numquest", 10, "number of requests")
+	flag.Parse()
+	fmt.Println("REQUESTS count - ", cfg.NumQuest)
+
 	cl := &Client{}
 	cl.LoadPbftClientConfig()
 

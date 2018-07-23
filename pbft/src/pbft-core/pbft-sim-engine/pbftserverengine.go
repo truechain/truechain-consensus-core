@@ -21,7 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"time"
-
+	
 	"pbft-core"
 
 	"golang.org/x/sys/unix"
@@ -32,7 +32,7 @@ var (
 	svList []*pbft.Server
 )
 
-// StartPbftServers starts PBFT servers from config information
+// StartPbftServers launches the setup with numq count of messages
 func StartPbftServers() {
 	svList = make([]*pbft.Server, cfg.N)
 	for i := 0; i < cfg.N; i++ {
@@ -59,8 +59,19 @@ func main() {
 	pbft.InitRootLoger()
 
 	cfg.LoadPbftSimConfig()
-	cfg.GenerateKeysToFile(cfg.NumKeys)
 	StartPbftServers()
+	cfg.GenerateKeysToFile(cfg.NumKeys)
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		select {
+		case sig := <-c:
+			fmt.Printf("Got %s signal. Aborting...\n", sig)
+			os.Exit(1)
+		}
+	}()
 
 	// Use the main goroutine as signal handling loop
 	sigCh := make(chan os.Signal)
