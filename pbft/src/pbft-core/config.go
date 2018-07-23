@@ -65,3 +65,12 @@ func (cfg *Config) LoadPbftSimConfig() {
 	cfg.Blocksize = 10 // This is hardcoded to 10 for now
 	cfg.KD = path.Join(GetCWD(), "keys/")
 }
+
+// GetPbftConfig returns the basic PBFT configuration used for simulation
+func GetPbftConfig() *Config {
+	cfg := &Config{}
+	cfg.LoadPbftSimConfig()
+
+	return cfg
+
+}

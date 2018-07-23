@@ -139,8 +139,7 @@ func GetIPConfigs(s string) ([]string, []int, []int) {
 	lst := strings.Fields(content)
 	ports := make([]int, 0)
 	grpcports := make([]int, 0)
-	for k, v := range lst {
-		MyPrint(0, string(k), v)
+	for k := range lst {
 		ports = append(ports, BasePort+k)
 		grpcports = append(grpcports, GrpcBasePort+k)
 	}

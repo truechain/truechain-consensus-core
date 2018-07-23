@@ -61,6 +61,15 @@ func (tp *TxPool) Add(tx *pb.Transaction, sender []byte) {
 	tp.count++
 }
 
+// Get returns a transaction if it is contained in the pool
+// and nil otherwise.
+func (tp *TxPool) Get(txHash Hash) *pb.Transaction {
+	tp.lock.RLock()
+	defer tp.lock.RUnlock()
+
+	return tp.all.Get(txHash)
+}
+
 // Remove removes a transaction from the transaction pool
 func (tp *TxPool) Remove(txHash Hash) {
 	tp.lock.Lock()

@@ -17,9 +17,11 @@ limitations under the License.
 package pbft
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 	"math/rand"
+	"path"
 	"reflect"
 
 	pb "pbft-core/fastchain"
@@ -132,4 +134,22 @@ func HashTxns(txns []*pb.Transaction) []byte {
 func HashBlockHeader(header *pb.PbftBlockHeader) []byte {
 	headerData, _ := proto.Marshal(header)
 	return ethcrypto.Keccak256(headerData)
+}
+
+// VerifySender verifies transaction sender by matching public key obtained from transaction signature with expected public key
+// TODO This should match sender addresses later
+func VerifySender(tx *pb.Transaction, n int) ([]byte, bool) {
+	sig := tx.Data.Signature
+	txPubkey, _ := ethcrypto.Ecrecover(tx.Data.Hash, sig)
+
+	cfg := GetPbftConfig()
+	pubKeyFile := fmt.Sprintf("sign%v.pub", n)
+	fmt.Println("fetching file: ", pubKeyFile)
+	pubKey, _ := FetchPublicKeyBytes(path.Join(cfg.KD, pubKeyFile))
+
+	if bytes.Equal(txPubkey, pubKey) {
+		return pubKey, true
+	}
+
+	return nil, false
 }

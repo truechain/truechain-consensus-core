@@ -17,18 +17,15 @@ limitations under the License.
 package pbft
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"log"
 	"net"
-	"path"
 	"time"
 
 	pb "pbft-core/fastchain"
 
-	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"google.golang.org/grpc"
 )
 
@@ -42,7 +39,6 @@ type Server struct {
 	Tc        *pb.TrueChain
 	Genesis   *pb.PbftBlock
 	committed chan bool
-	txPool    *TxPool
 }
 
 type fastChainServer struct {
@@ -52,22 +48,6 @@ type fastChainServer struct {
 // Start - Initial server logic goes here
 func (sv *Server) Start() {
 	MyPrint(1, "Firing up peer server...\n")
-}
-
-// GetSender returns public key of sender for now. This should return sender address.
-func (sv *Server) GetSender(req *pb.Transaction) []byte {
-	sig := req.Data.Signature
-	pubkey, _ := ethcrypto.Ecrecover(req.Data.Hash, sig)
-
-	clientPubKeyFile := fmt.Sprintf("sign%v.pub", sv.Cfg.N)
-	fmt.Println("fetching file: ", clientPubKeyFile)
-	clientPubKey, _ := FetchPublicKeyBytes(path.Join(sv.Cfg.KD, clientPubKeyFile))
-
-	if bytes.Equal(pubkey, clientPubKey) {
-		return pubkey
-	}
-
-	return nil
 }
 
 // createInternalPbftReq wraps a transaction request from client for internal rpc communication between pbft nodes
@@ -110,15 +90,15 @@ func (sv *Server) AppendBlock(block *pb.PbftBlock) {
 // NewTxnRequest handles transaction requests from clients
 func (sv *fastChainServer) NewTxnRequest(ctx context.Context, txnReq *pb.Transaction) (*pb.GenericResp, error) {
 	MyPrint(4, "Received new transacion request %d from client on node %d", txnReq.Data.AccountNonce, sv.pbftSv.Nd.ID)
-	sender := sv.pbftSv.GetSender(txnReq)
-	if sender != nil {
-		MyPrint(0, "Txn verified")
+	sender, ok := VerifySender(txnReq, sv.pbftSv.Cfg.N)
+	if ok {
+		MyPrint(0, "Transaction sender verified")
 	} else {
-		MyPrint(0, "Txn verification failed")
+		MyPrint(0, "Transaction verification failed")
 		return &pb.GenericResp{Msg: "Transaction verification failed"}, errors.New("Invalid transaction request")
 	}
 
-	sv.pbftSv.txPool.Add(txnReq, sender)
+	sv.pbftSv.Nd.txPool.Add(txnReq, sender)
 	MyPrint(4, "Added request %d to transaction pool on node %d.", txnReq.Data.AccountNonce, sv.pbftSv.Nd.ID)
 
 	return &pb.GenericResp{Msg: fmt.Sprintf("Transaction request %d received in node %d\n", txnReq.Data.AccountNonce, sv.pbftSv.Nd.ID)}, nil
@@ -140,7 +120,7 @@ func (sv *Server) createBlockAndBroadcast() {
 	// for broadcasting once the previous block has been committed
 	go func() {
 		for {
-			if sv.txPool.GetTxCount() < sv.Cfg.Blocksize {
+			if sv.Nd.txPool.GetTxCount() < sv.Cfg.Blocksize {
 				continue
 			}
 
@@ -148,12 +128,12 @@ func (sv *Server) createBlockAndBroadcast() {
 			var gasUsed int64
 			gasUsed = 0
 			for i := 0; i < sv.Cfg.Blocksize; i++ {
-				txn := sv.txPool.priced.Get()
+				txn := sv.Nd.txPool.priced.Get()
 				blockTxns = append(blockTxns, txn)
 				MyPrint(1, "Adding transaction request %d to block %d\n", txn.Data.AccountNonce, sv.Tc.LastBlockHeader.Number)
 				gasUsed = gasUsed + txn.Data.Price
-				sv.txPool.Remove(BytesToHash(txn.Data.Hash))
-				MyPrint(4, "Transacion count is %d", sv.txPool.GetTxCount())
+				sv.Nd.txPool.Remove(BytesToHash(txn.Data.Hash))
+				MyPrint(4, "Transacion count is %d", sv.Nd.txPool.GetTxCount())
 			}
 			parentHash := HashBlockHeader(sv.Tc.LastBlockHeader)
 			txnsHash := HashTxns(blockTxns)
@@ -182,8 +162,6 @@ func BuildServer(cfg Config, IP string, port int, grpcPort int, me int) *Server 
 
 	RegisterPbftGrpcListener(grpcPort, sv)
 
-	sv.txPool = newTxPool()
-
 	sv.Genesis = GetDefaultGenesisBlock()
 	MyPrint(0, "Genesis block generated: %x\n\n", sv.Genesis.Header.TxnsHash)
 
@@ -208,7 +186,6 @@ func BuildServer(cfg Config, IP string, port int, grpcPort int, me int) *Server 
 			if sv.Nd.ID == sv.Nd.Primary {
 				sv.committed <- true
 			}
-
 		}
 	}(sv.Nd.ApplyCh)
 
