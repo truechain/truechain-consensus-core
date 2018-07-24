@@ -158,7 +158,7 @@ func BuildServer(cfg Config, IP string, port int, grpcPort int, me int) *Server 
 	sv.Cfg = &cfg
 
 	applyChan := make(chan ApplyMsg, cfg.NumQuest)
-	sv.Nd = Make(cfg, me, port, 0, applyChan, 100) // test 100 messages
+	sv.Nd = Make(cfg, me, port, 0, applyChan)
 
 	RegisterPbftGrpcListener(grpcPort, sv)
 
