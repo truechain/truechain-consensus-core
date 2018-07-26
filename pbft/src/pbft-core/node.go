@@ -16,7 +16,6 @@ limitations under the License.
 
 package pbft
 
-import "time"
 import (
 	"bytes"
 	"crypto/ecdsa"
@@ -33,6 +32,7 @@ import (
 	"path"
 	"strconv"
 	"sync"
+	"time"
 
 	pb "pbft-core/fastchain"
 
@@ -211,12 +211,11 @@ type Node struct {
 	clientMessageLog map[clientMessageLogItem]Request
 	// nodeMessageLog	map[string](map[int](map[int]Request))
 
-	CommittedBlock chan *pb.PbftBlock
+	committedBlock chan *pb.PbftBlock
 
-	/// apply channel
-
-	ApplyCh chan ApplyMsg // Make sure that the client keeps getting the content out of applyCh
 	txPool  *TxPool
+	genesis *pb.PbftBlock
+	tc      *pb.TrueChain
 }
 
 type reqCounter struct {
@@ -325,12 +324,6 @@ func (nd *Node) resetMsgDicts() {
 	nd.commDict = make(map[DigType]reqCounter)
 }
 
-func (nd *Node) execute(am ApplyMsg) {
-	// TODO: add msg to applyCh, should be executed in a separate go routine
-	// TODO: add we probably want to keep a log for this
-	nd.ApplyCh <- am
-}
-
 func (nd *Node) suicide() {
 	nd.killFlag = true
 }
@@ -343,16 +336,6 @@ type ProxyProcessPrePrepareArg struct {
 
 // ProxyProcessPrePrepareReply is a stub atm, an ack of reply
 type ProxyProcessPrePrepareReply struct {
-}
-
-// ProxyNewClientRequestArg holds context for the client, maps request to client
-type ProxyNewClientRequestArg struct {
-	Req      Request
-	ClientID int
-}
-
-// ProxyNewClientRequestReply holds reply to client's request
-type ProxyNewClientRequestReply struct {
 }
 
 // ProxyProcessPrepareArg holds client-request context for Prepare phase of PBFT
@@ -416,14 +399,6 @@ func (nd *Node) broadcast(req Request) {
 		}
 		nd.broadcastByRPC("Node.ProxyProcessPrePrepare", arg, &reply)
 		break
-	case TypeRequest:
-		arg := ProxyNewClientRequestArg{req, req.Inner.ID}
-		reply := make([]interface{}, nd.N)
-		for k := 0; k < nd.N; k++ {
-			reply[k] = &ProxyNewClientRequestReply{}
-		}
-		nd.broadcastByRPC("Node.ProxyNewClientRequest", arg, &reply)
-		break
 	case typePrepare:
 		arg := ProxyProcessPrepareArg{req, req.Inner.ID}
 		reply := make([]interface{}, nd.N)
@@ -474,13 +449,6 @@ func (nd *Node) broadcast(req Request) {
 func (nd *Node) ProxyProcessPrePrepare(arg ProxyProcessPrePrepareArg, reply *ProxyProcessPrePrepareReply) error {
 	MyPrint(2, "[%d] ProxyProcessPrePrepare %v\n", nd.ID, arg)
 	nd.processPrePrepare(arg.Req, arg.ClientID) // we don't have return value here
-	return nil
-}
-
-// ProxyNewClientRequest receives request for transaction from Client.
-func (nd *Node) ProxyNewClientRequest(arg ProxyNewClientRequestArg, reply *ProxyNewClientRequestReply) error {
-	MyPrint(2, "New Client Request called.\n")
-	nd.NewClientRequest(arg.Req, arg.ClientID) // we don't have return value here
 	return nil
 }
 
@@ -542,7 +510,7 @@ func (nd *Node) broadcastByRPC(rpcPath string, arg interface{}, reply *[]interfa
 func (nd *Node) executeInOrder(req Request) {
 	// Not sure if we need this inside the protocol. I tend to put this in application layer.
 	waiting := true
-	r := req
+	//r := req
 	seq := req.Inner.Seq
 	dig := DigType(req.Inner.Msg)
 	nd.mu.Lock()
@@ -553,12 +521,11 @@ func (nd *Node) executeInOrder(req Request) {
 	}
 	for seq == nd.lastExecuted+1 {
 		waiting = false
-		nd.execute(ApplyMsg{seq, r})
 		nd.lastExecuted++
-		rtemp, ok := nd.waiting[seq+1]
+		_, ok := nd.waiting[seq+1]
 		if ok {
 			seq++
-			r = rtemp
+			//r = rtemp
 			nd.mu.Lock()
 			delete(nd.waiting, seq)
 			nd.mu.Unlock()
@@ -662,8 +629,8 @@ func (nd *Node) handleTimeout(dig DigType, view int) {
 	nd.processViewChange(viewChange, 0)
 }
 
-// NewClientRequest handles transaction request from client and broadcasts it to other PBFT nodes from primary replica
-func (nd *Node) NewClientRequest(req Request, clientID int) { // TODO: change to single arg and single reply
+// newClientRequest handles transaction request from client and broadcasts it to other PBFT nodes from primary replica
+func (nd *Node) newClientRequest(req Request, clientID int) { // TODO: change to single arg and single reply
 	if v, ok := nd.active[req.Dig]; ok {
 		if v.req == nil {
 			nd.mu.Lock()
@@ -938,11 +905,29 @@ func (nd *Node) processPrepare(req Request, clientID int) {
 	}
 }
 
+// NewTrueChain creates a fresh blockchain
+func (nd *Node) newTrueChain() {
+
+	tc := &pb.TrueChain{}
+
+	tc.Blocks = make([]*pb.PbftBlock, 0)
+	tc.Blocks = append(tc.Blocks, nd.genesis)
+	tc.LastBlockHeader = nd.genesis.Header
+
+	nd.tc = tc
+}
+
+// AppendBlock appends a block to the blockchain
+func (nd *Node) appendBlock(block *pb.PbftBlock) {
+	nd.tc.Blocks = append(nd.tc.Blocks, block)
+	nd.tc.LastBlockHeader = block.Header
+}
+
 func (nd *Node) processCommit(req Request) {
 	nd.addNodeHistory(req)
 	nd.incCommDict(DigType(req.Inner.Msg))
 	if nd.checkCommittedMargin(DigType(req.Inner.Msg), req) {
-		nd.CommittedBlock <- req.Inner.Block
+		nd.committedBlock <- req.Inner.Block
 		MyPrint(2, "[%d] Committed %v\n", nd.ID, req.Inner.Block.Header.Number)
 		nd.record("COMMITTED seq number " + strconv.Itoa(req.Inner.Seq))
 		nd.recordPBFTCommit(req)
@@ -1227,16 +1212,65 @@ func (nd *Node) setupConnections() {
 	MyPrint(1, "[%d] Setup finished\n", nd.ID)
 }
 
+// createInternalPbftReq wraps a transaction request from client for internal rpc communication between pbft nodes
+func (nd *Node) createInternalPbftReq(proposedBlock *pb.PbftBlock) Request {
+	req := Request{}
+	reqInner := RequestInner{}
+
+	reqInner.ID = nd.cfg.N // client-id
+	reqInner.Seq = 0
+	reqInner.View = 0
+	reqInner.Reqtype = TypeRequest // client request
+	reqInner.Block = proposedBlock
+	reqInner.Timestamp = time.Now().Unix()
+
+	req.Inner = reqInner
+
+	req.AddSig(nd.EcdsaKey)
+
+	return req
+}
+
+func (nd *Node) createBlockAndBroadcast() {
+	// This go routine creates the slices of block-size length and creates the block
+	// for broadcasting once the previous block has been committed
+	blockSize := nd.cfg.Blocksize
+	go func() {
+		for {
+			if nd.txPool.GetTxCount() < blockSize {
+				continue
+			}
+
+			blockTxs := make([]*pb.Transaction, 0)
+			var gasUsed int64
+			gasUsed = 0
+			for i := 0; i < blockSize; i++ {
+				tx := nd.txPool.priced.Get()
+				blockTxs = append(blockTxs, tx)
+				gasUsed = gasUsed + tx.Data.Price
+				nd.txPool.Remove(BytesToHash(tx.Data.Hash))
+				MyPrint(4, "Transacion count is %d", nd.txPool.GetTxCount())
+			}
+			parentHash := HashBlockHeader(nd.tc.LastBlockHeader)
+			txsHash := HashTxns(blockTxs)
+			header := NewPbftBlockHeader(nd.tc.LastBlockHeader.Number+1, 5000, int64(gasUsed), parentHash, txsHash)
+
+			block := NewPbftBlock(header, blockTxs)
+
+			req := nd.createInternalPbftReq(block)
+			nd.newClientRequest(req, nd.cfg.N)
+		}
+	}()
+}
+
 // Make registers all node config objects,
-func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg) *Node {
+func Make(cfg Config, me int, port int, view int) *Node {
 	gob.Register(&ApplyMsg{})
 	gob.Register(&RequestInner{})
 	gob.Register(&Request{})
 	gob.Register(&checkpointProofType{})
 	gob.Register(&ProxyProcessPrePrepareArg{})
 	gob.Register(&ProxyProcessPrePrepareReply{})
-	gob.Register(&ProxyNewClientRequestArg{})
-	gob.Register(&ProxyNewClientRequestReply{})
 	gob.Register(&ProxyProcessCheckpointArg{})
 	gob.Register(&ProxyProcessCheckpointReply{})
 	gob.Register(&ProxyProcessCommitArg{})
@@ -1277,7 +1311,6 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg) *Node {
 	nd.killFlag = false
 	nd.ID = me
 	nd.active = make(map[DigType]ActiveItem)
-	nd.ApplyCh = applyCh
 	nd.prepDict = make(map[DigType]reqCounter)
 	nd.commDict = make(map[DigType]reqCounter)
 	nd.nodeMessageLog = nodeMsgLog{}
@@ -1287,9 +1320,14 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg) *Node {
 	nd.cfg.LD = path.Join(GetCWD(), "logs/")
 	// kfpath := path.Join(cfg.KD, filename)
 
+	nd.genesis = GetDefaultGenesisBlock()
+	MyPrint(0, "Genesis block generated: %x\n\n", nd.genesis.Header.TxnsHash)
+
+	nd.newTrueChain()
+
 	// Buffered channel of size 1 contains the newly committed block to be added to
 	// the blockchain by pbft-server
-	nd.CommittedBlock = make(chan *pb.PbftBlock, 1)
+	nd.committedBlock = make(chan *pb.PbftBlock, 1)
 
 	// Create empty transaction pool
 	nd.txPool = newTxPool()
@@ -1316,5 +1354,17 @@ func Make(cfg Config, me int, port int, view int, applyCh chan ApplyMsg) *Node {
 	go nd.setupConnections()
 
 	go nd.serverLoop()
+
+	if nd.ID == nd.Primary {
+		nd.createBlockAndBroadcast()
+	}
+
+	go func() {
+		for {
+			block := <-nd.committedBlock
+			nd.appendBlock(block)
+		}
+	}()
+
 	return nd
 }
