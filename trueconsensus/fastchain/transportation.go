@@ -26,18 +26,17 @@ import (
 )
 
 // MakeTransportations - TODO: implement send/receive messages with RPC
-func MakeTransportations(index int) []*rpc.Client {
+func (cfg *Config) MakeTransportations(index int) []*rpc.Client {
 	// index: the index if the server itself
 	clientList := make([]*rpc.Client, 0)
-	lst, ports, _ := GetIPConfigs("ipconfig")
 	// serve RPC server
 	rpc.Register(&Node{})
 	rpc.HandleHTTP()
-	l, e := net.Listen("tcp", ":"+strconv.Itoa(ports[index]))
+	l, e := net.Listen("tcp", ":"+strconv.Itoa(cfg.Network.Ports[index]))
 	CheckErr(e)
 	go http.Serve(l, nil)
-	for ind, val := range lst {
-		client, e := rpc.DialHTTP("tcp", val+":"+strconv.Itoa(ports[ind]))
+	for ind, val := range cfg.Network.IPList {
+		client, e := rpc.DialHTTP("tcp", val+":"+strconv.Itoa(cfg.Network.Ports[ind]))
 		CheckErr(e)
 		clientList = append(clientList, client)
 	}

@@ -1,19 +1,19 @@
 # pbft core configurations
 # name: pbft base configuration
-testbed_config:
+testbed:
   total: 5 # excluding base client
   client_id: 5 # total-1 => 0-indexed # TODO -> add threaded multi client request support, and check for id->seq consistency 
   server_id_init: 4 # N => 0 indexed
   threading_enabled: true
   max_retries: 5
-  requests:
-    max: 12
-    batch_size: 4
+  max_requests: 12
+  batch_size: 4
 general:
-  max_fail: 1
-  base_port: 49500
+  max_fail: 1 # number of faults to be tolerated
+  rpc_base_port: 49500 # starting port for pbft server
+  output_threshold: 0 # an auxiliary to utils.MyPrint for verbosity
   # tor_socksport_range: 9050,9150
-grpc:
+  grpc_base_port: 10000 # gRPC servers and client
   timeout: 60
 # refer to  README.md#parameterized-by-following section for these configurables
 slowchain:

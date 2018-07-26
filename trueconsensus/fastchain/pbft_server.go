@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
+	"trueconsensus/common"
 
 	pb "trueconsensus/fastchain/proto"
 
@@ -44,28 +46,28 @@ type fastChainServer struct {
 
 // Start - Initial server logic goes here
 func (sv *Server) Start() {
-	MyPrint(1, "Firing up peer server...\n")
+	common.MyPrint(1, "Firing up peer server...\n")
 }
 
 // NewTxnRequest handles transaction requests from clients
 func (sv *fastChainServer) NewTxnRequest(ctx context.Context, txnReq *pb.Transaction) (*pb.GenericResp, error) {
-	MyPrint(4, "Received new transacion request %d from client on node %d", txnReq.Data.AccountNonce, sv.pbftSv.Nd.ID)
+	common.MyPrint(4, "Received new transacion request %d from client on node %d", txnReq.Data.AccountNonce, sv.pbftSv.Nd.ID)
 
 	// Discard already known transactions
 	if sv.pbftSv.Nd.txPool.all.Get(BytesToHash(txnReq.Data.Hash)) != nil {
 		return &pb.GenericResp{Msg: "Already known transaction. Ignoring transaction request."}, errors.New("Transaction already exists in pool")
 	}
 
-	sender, ok := VerifySender(txnReq, sv.pbftSv.Cfg.N)
+	sender, ok := VerifySender(txnReq, sv.pbftSv.Cfg.Network.N)
 	if ok {
-		MyPrint(0, "Transaction sender verified")
+		common.MyPrint(0, "Transaction sender verified")
 	} else {
-		MyPrint(0, "Transaction verification failed")
+		common.MyPrint(0, "Transaction verification failed")
 		return &pb.GenericResp{Msg: "Transaction verification failed"}, errors.New("Invalid transaction request")
 	}
 
 	sv.pbftSv.Nd.txPool.Add(txnReq, sender)
-	MyPrint(4, "Added request %d to transaction pool on node %d.", txnReq.Data.AccountNonce, sv.pbftSv.Nd.ID)
+	common.MyPrint(4, "Added request %d to transaction pool on node %d.", txnReq.Data.AccountNonce, sv.pbftSv.Nd.ID)
 
 	return &pb.GenericResp{Msg: fmt.Sprintf("Transaction request %d received in node %d", txnReq.Data.AccountNonce, sv.pbftSv.Nd.ID)}, nil
 }
@@ -83,15 +85,14 @@ func RegisterPbftGrpcListener(grpcPort int, sv *Server) {
 
 // BuildServer initiates the Server resource properties and listens to client's
 // message requests as well as interacts with the channel
-func BuildServer(cfg Config, IP string, port int, grpcPort int, me int) *Server {
+func BuildServer(cfg *Config, me int) *Server {
 	sv := &Server{}
-	sv.IP = IP
-	sv.Port = port
-	sv.Cfg = &cfg
+	sv.IP = cfg.Network.IPList[me]
+	sv.Port = cfg.Network.Ports[me]
+	sv.Cfg = cfg
+	sv.Nd = Make(cfg, me, cfg.Network.Ports[me], 0, applyChan)
 
-	sv.Nd = Make(cfg, me, port, 0)
-
-	RegisterPbftGrpcListener(grpcPort, sv)
+	RegisterPbftGrpcListener(cfg.Network.GrpcPorts[me], sv)
 
 	go sv.Start() // in case the server has some initial logic
 	return sv

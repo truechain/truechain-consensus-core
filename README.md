@@ -3,82 +3,15 @@ TrueChain Consensus Protocol
 
 [![Travis](https://travis-ci.com/truechain/truechain-consensus-core.svg?branch=master)](https://travis-ci.com/truechain/truechain-consensus-core)
 
-## Building the source
+# Building the source
 
-# PBFT-Core
-===
+## Build
 
-*These codes have not gone through reviews. Please use them with cautions*
-
-This code base is an ongoing implementation of Practical Byzantine Fault Tolerance protocol. This PBFT will be the BFT layer in our hybrid consensus design. For this testnet, we will be using PBFT alone to support services and meanwhile working on development and research on the rest of hybrid consensus.
-
-Although there exists a bunch of existing PBFT implementations, we decide to write our own version to get fully control of every details and to conveniently make necessary extensions so that it could fit into the hybrid consensus protocol (which requires more than a standard PBFT).
-
-### Installation
-
-#### Step 1
+### Step 1
 
 Install [Docker](https://docs.docker.com/install/) and [HyperMake](http://evo-cloud.github.io/hmake/quickguide/install/).
 
 Make sure you have hmake in your `$GOBIN` path.
-
-### Step 2
-
-```
-go get -u github.com/truechain/truechain-consensus-core
-```
-
-### Step 3
-
-Make sure you have `$GOBIN` in `$PATH`:
-
-```
-export GOBIN=$GOPATH/bin
-export PATH=$PATH:$GOBIN
-```
-
-Then,
-
-```
-cd $GOPATH/src/github.com/truechain/truechain-consensus-core
-hmake
-cp bin/{linux/darwin}/truechain-engine $GOBIN/
-```
-
-### Run
-
-Populate a sample `~/hosts` file with repetitive 5-6 lines containing loopback IP address `127.0.0.1`. 
-
-```
-$ truechain-engine
-```
-
-This triggers both server and client subroutines. Also displays progress of key signing, data exchange and ledger log.
-
-```
-[.]Loading IP configs...
-[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)Get IPList [127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1], Ports [40540 40541 40542 40543 40544 40545]
-[.]Generated 6 keypairs in /home/arcolife/go/src/github.com/truechain/truechain-consensus-core/keys folder..
-127.0.0.1 40540 0
-[!]Going to tolerate 1 adversaries
-[!]Initial Config &{{5 /home/arcolife/go/src/github.com/truechain/truechain-consensus-core/keys  [127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1] [40540 40541 40542 40543 40544 40545] /home/arcolife/hosts 100 6} {0 0} {0 0} [] 40540 100 false <nil> <nil> <nil> <nil> 0 0 5 0 true 1 0 0 0 0 0 0 [] 100 0 0 map[] 600  map[] map[] map[] map[] map[] map[] <nil> <nil> {{0 0} map[]} map[] 0xc420022c00}
-fetching file:  sign0.pub
-[.]Fetched private keyfetching file:  sign1.pub
-fetching file:  sign2.pub
-fetching file:  sign3.pub
-...
-<snip>
-```
-
-### Build
-
-In case you have a new dependency that's not listed in `src/vendor/manifest` folder, just run this from `src/`:
-
-```
-gvt fetch github.com/fatih/color
-```
-
-This would add a folder `src/vendor` if not already present, and would also generate/append to `src/vendor/manifest`.
 
 #### Building it all with hmake and docker
 
@@ -100,6 +33,91 @@ The first time, it would download:
 - Dependencies as per `src/vendor/manifest`, which again, could be generated using [gvt](https://github.com/FiloSottile/gvt).
 
 The binaries would be available in `bin/`'s platform-specific folders.
+
+
+### Step 2
+
+```
+git clone https://github.com/truechain/truechain-consensus-core.git
+cd truechain-consensus-core
+git checkout devel
+```
+
+OR
+
+```
+go get -u github.com/truechain/truechain-consensus-core
+```
+
+
+### Step 3
+
+Make sure you have `$GOBIN` in `$PATH`:
+
+```
+export GOBIN=$GOPATH/bin
+export PATH=$PATH:$GOBIN
+```
+
+Then,
+
+### Run
+
+Populate a sample `/etc/truechain/hosts` file with repetitive 5-6 lines containing loopback IP address `127.0.0.1`. 
+
+Then,
+
+```
+./bin/{linux/darwin}/truechain-engine
+```
+
+To install:
+
+```
+cd $GOPATH/src/github.com/truechain/truechain-consensus-core
+hmake
+cp bin/{linux/darwin}/truechain-engine $GOBIN/
+
+# then from anywhere in shell, run
+$ truechain-engine
+```
+
+This triggers both server and client subroutines. Also displays progress of key signing, data exchange and ledger log.
+
+```
+[.]Loading IP configs...
+[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)Get IPList [127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1], Ports [40540 40541 40542 40543 40544 40545]
+[.]Generated 6 keypairs in /home/arcolife/go/src/github.com/truechain/truechain-consensus-core/keys folder..
+127.0.0.1 40540 0
+[!]Going to tolerate 1 adversaries
+[!]Initial Config &{{5 /home/arcolife/go/src/github.com/truechain/truechain-consensus-core/keys  [127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1] [40540 40541 40542 40543 40544 40545] /home/arcolife/hosts 100 6} {0 0} {0 0} [] 40540 100 false <nil> <nil> <nil> <nil> 0 0 5 0 true 1 0 0 0 0 0 0 [] 100 0 0 map[] 600  map[] map[] map[] map[] map[] map[] <nil> <nil> {{0 0} map[]} map[] 0xc420022c00}
+fetching file:  sign0.pub
+[.]Fetched private keyfetching file:  sign1.pub
+fetching file:  sign2.pub
+fetching file:  sign3.pub
+...
+<snip>
+```
+
+### CI
+
+hmake build checks:
+
+```
+hmake build check test
+```
+
+#### managing a missing dependency 
+
+In case you have a new dependency that's not listed in `trueconsensus/vendor/manifest` folder, just run this from `trueconsensus/`:
+
+```
+gvt fetch github.com/fatih/color
+```
+
+This would add a folder `trueconsensus/vendor` if not already present, and would also generate/append to `trueconsensus/vendor/manifest`.
+
+Note that `gvt fetch <package_name>` updates the file `src/vendor/manifest`.
 
 #### Building it all with a shell script
 

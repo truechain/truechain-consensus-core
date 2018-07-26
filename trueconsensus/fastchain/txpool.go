@@ -47,7 +47,7 @@ func (tp *TxPool) Add(tx *pb.Transaction, sender []byte) {
 	tp.lock.Lock()
 	defer tp.lock.Unlock()
 
-	senderHash := BytesToHash(sender)
+	senderHash := common.BytesToHash(sender)
 	// If new sender add new sender entry to txmap
 	if txs, _ := tp.txMap[senderHash]; txs == nil {
 		txs = newTxSortedMap()
@@ -135,7 +135,7 @@ func (t *txLookup) Add(tx *pb.Transaction) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	t.all[BytesToHash(tx.Data.Hash)] = tx
+	t.all[common.BytesToHash(tx.Data.Hash)] = tx
 }
 
 // Remove removes a transaction from the lookup.

@@ -166,7 +166,7 @@ type keyItem *ecdsa.PublicKey
 
 // Node contains base properties of a Node
 type Node struct {
-	cfg      Config
+	cfg      *Config
 	mu       sync.Mutex
 	clientMu sync.Mutex
 	peers    []*rpc.Client
@@ -681,12 +681,12 @@ func (nd *Node) initializeKeys() {
 	for i := 0; i < nd.N; i++ {
 		pubkeyFile := fmt.Sprintf("sign%v.pub", i)
 		fmt.Println("fetching file: ", pubkeyFile)
-		pubKeyBytes, _ := FetchPublicKeyBytes(path.Join(nd.cfg.KD, pubkeyFile))
+		pubKeyBytes, _ := common.FetchPublicKeyBytes(path.Join(nd.cfg.Logistics.KD, pubkeyFile))
 		pubKey, _ := ethcrypto.UnmarshalPubkey(pubKeyBytes)
 		nd.KeyDict[i] = pubKey
 		if i == nd.ID {
 			pemkeyFile := fmt.Sprintf("sign%v.pem", i)
-			pemKey, _ := ethcrypto.LoadECDSA(path.Join(nd.cfg.KD, pemkeyFile))
+			pemKey, _ := ethcrypto.LoadECDSA(path.Join(nd.cfg.Logistics.KD, pemkeyFile))
 			nd.EcdsaKey = pemKey
 			common.MyPrint(1, "Fetched private key")
 		}
@@ -760,10 +760,28 @@ func (nd *Node) checkCommittedMargin(dig DigType, req Request) bool {
 	return false
 }
 
+// VerifySender verifies transaction sender by matching public key obtained from transaction signature with expected public key
+// TODO This should match sender addresses later
+func VerifySender(tx *pb.Transaction, n int) ([]byte, bool) {
+	sig := tx.Data.Signature
+	txPubkey, _ := ethcrypto.Ecrecover(tx.Data.Hash, sig)
+
+	cfg := GetPbftConfig()
+	pubKeyFile := fmt.Sprintf("sign%v.pub", n)
+	fmt.Println("fetching file: ", pubKeyFile)
+	pubKey, _ := common.FetchPublicKeyBytes(path.Join(cfg.Logistics.KD, pubKeyFile))
+
+	if bytes.Equal(txPubkey, pubKey) {
+		return pubKey, true
+	}
+
+	return nil, false
+}
+
 // VerifyBlockTxs verifies transactions in a block by checking sender and account nonce
 func (nd *Node) VerifyBlockTxs(blk *pb.PbftBlock) bool {
 	for _, tx := range blk.Txns {
-		if _, ok := VerifySender(tx, nd.cfg.N); !ok { // Verify if tx came from client
+		if _, ok := VerifySender(tx, nd.cfg.Network.N); !ok { // Verify if tx came from client
 			return false
 		}
 
@@ -777,7 +795,7 @@ func (nd *Node) VerifyBlockTxs(blk *pb.PbftBlock) bool {
 				txInPool <- false
 			}(timer)
 
-			txHash := BytesToHash(tx.Data.Hash)
+			txHash := common.BytesToHash(tx.Data.Hash)
 			for {
 				if t := nd.txPool.Get(txHash); t != nil {
 					foundTx <- t
@@ -1202,9 +1220,9 @@ func (nd *Node) beforeShutdown() {
 func (nd *Node) setupConnections() {
 	<-nd.SetupReady
 	common.MyPrint(1, "[%d] Begin to setup RPC connections.\n", nd.ID)
-	peers := make([]*rpc.Client, nd.cfg.N)
-	for i := 0; i < nd.cfg.N; i++ {
-		cl, err := rpc.Dial("tcp", nd.cfg.IPList[i]+":"+strconv.Itoa(nd.cfg.Ports[i]))
+	peers := make([]*rpc.Client, nd.cfg.Network.N)
+	for i := 0; i < nd.cfg.Network.N; i++ {
+		cl, err := rpc.Dial("tcp", nd.cfg.Network.IPList[i]+":"+strconv.Itoa(nd.cfg.Network.Ports[i]))
 		if err != nil {
 			common.MyPrint(3, "RPC error.\n")
 		}
@@ -1266,7 +1284,7 @@ func (nd *Node) createBlockAndBroadcast() {
 }
 
 // Make registers all node config objects,
-func Make(cfg Config, me int, port int, view int) *Node {
+func Make(cfg *Config, me int, port int, view int) *Node {
 	gob.Register(&ApplyMsg{})
 	gob.Register(&RequestInner{})
 	gob.Register(&Request{})
@@ -1287,14 +1305,14 @@ func Make(cfg Config, me int, port int, view int) *Node {
 	nd := &Node{}
 	//rpc.Register(nd)
 	nd.cfg = cfg
-	nd.N = cfg.N
+	nd.N = cfg.Network.N
 	nd.f = (nd.N - 1) / 3
 	common.MyPrint(2, "Going to tolerate %d adversaries\n", nd.f)
 	nd.lowBound = 0
 	nd.highBound = 0
 	nd.view = view
 	nd.viewInUse = true
-	nd.Primary = view % nd.cfg.N
+	nd.Primary = view % nd.cfg.Network.N
 	nd.port = port
 	nd.seq = 0
 	nd.lastExecuted = 0
@@ -1318,9 +1336,9 @@ func Make(cfg Config, me int, port int, view int) *Node {
 	nd.nodeMessageLog = nodeMsgLog{}
 	nd.nodeMessageLog.content = make(map[int](map[int](map[int]Request)))
 	nd.prepared = make(map[int]Request)
-	common.MyPrint(2, "Initial Config %v\n", nd)
-	nd.cfg.LD = path.Join(GetCWD(), "logs/")
-	// kfpath := path.Join(cfg.KD, filename)
+	common.MyPrint(2, "Initial Node Config %+v\n", nd)
+	nd.cfg.Logistics.LD = path.Join(GetCWD(), "logs/")
+	// kfpath := path.Join(cfg.Logistics.KD, filename)
 
 	nd.genesis = GetDefaultGenesisBlock()
 	MyPrint(0, "Genesis block generated: %x\n\n", nd.genesis.Header.TxnsHash)
@@ -1334,14 +1352,14 @@ func Make(cfg Config, me int, port int, view int) *Node {
 	// Create empty transaction pool
 	nd.txPool = newTxPool()
 
-	MakeDirIfNot(nd.cfg.LD) //handles 'already exists'
-	fi, err := os.Create(path.Join(nd.cfg.LD, "PBFTLog"+strconv.Itoa(nd.ID)+".txt"))
+	common.MakeDirIfNot(nd.cfg.Logistics.LD) //handles 'already exists'
+	fi, err := os.Create(path.Join(nd.cfg.Logistics.LD, "PBFTLog"+strconv.Itoa(nd.ID)+".txt"))
 	if err == nil {
 		nd.outputLog = fi
 	} else {
 		panic(err)
 	}
-	fi2, err2 := os.Create(path.Join(nd.cfg.LD, "PBFTBuffer"+strconv.Itoa(nd.ID)+".txt"))
+	fi2, err2 := os.Create(path.Join(nd.cfg.Logistics.LD, "PBFTBuffer"+strconv.Itoa(nd.ID)+".txt"))
 	if err2 == nil {
 		nd.commitLog = fi2
 	} else {

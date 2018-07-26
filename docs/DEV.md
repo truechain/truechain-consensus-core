@@ -143,7 +143,7 @@ Warning: debugging optimized function
     50:		}
     51:	
     52:		/////////////////
-    53:		cl := pbft.BuildClient(cfg, cfg.IPList[cfg.N], cfg.Ports[cfg.N], 0)
+    53:		cl := pbft.BuildClient(cfg, cfg.Network.IPList[cfg.N], cfg.Network.Ports[cfg.N], 0)
     54:		for k := 0; k < NUM_QUEST; k++ {
 =>  55:			cl.NewRequest("Request "+strconv.Itoa(k), int64(k))
     56:		}
@@ -350,7 +350,7 @@ and so does the following for client.go (from `BuildClient()`):
 ```go
 	cl.peers = peers
 	filename := fmt.Sprintf("sign%v.dat", cfg.N)
-	kfpath := path.Join(cfg.KD, filename)
+	kfpath := path.Join(cfg.Logistics.KD, filename)
 	MyPrint(2, kfpath + "\n")
 	b, err := ioutil.ReadFile(kfpath)
 	if err != nil {

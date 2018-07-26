@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"time"
 
+	"trueconsensus/common"
 	"trueconsensus/fastchain"
 
 	"context"
@@ -37,7 +38,7 @@ import (
 )
 
 var (
-	cfg    = pbft.Config{}
+	cfg    = pbft.GetPbftConfig()
 	svList []*pbft.Server
 	cl     = Client{}
 )
@@ -54,18 +55,18 @@ type Client struct {
 
 // Start is a notifier of client's init state
 func (cl *Client) Start() {
-	pbft.MyPrint(1, "Firing up client executioner...\n")
+	common.MyPrint(1, "Firing up client executioner...\n")
 
 }
 
 // LoadPbftClientConfig loads client configuration
 func (cl *Client) LoadPbftClientConfig() {
-	cl.IP = cfg.IPList[cfg.N]
-	cl.Port = cfg.Ports[cfg.N]
+	cl.IP = cfg.Network.IPList[cfg.Network.N]
+	cl.Port = cfg.Network.Ports[cfg.Network.N]
 	cl.Me = 0
 
-	pemkeyFile := fmt.Sprintf("sign%v.pem", cfg.N)
-	sk, _ := ethcrypto.LoadECDSA(path.Join(cfg.KD, pemkeyFile))
+	pemkeyFile := fmt.Sprintf("sign%v.pem", cfg.Network.N)
+	sk, _ := ethcrypto.LoadECDSA(path.Join(cfg.Logistics.KD, pemkeyFile))
 	fmt.Println("just fetched private key for Client")
 	fmt.Println(sk)
 	cl.privKey = sk
@@ -84,7 +85,7 @@ func (cl *Client) addSig(txnData *pb.TxnData) {
 // NewRequest takes in a message and timestamp as params for a new request from client
 func (cl *Client) NewRequest(msg string, k int, timeStamp int64) {
 	//broadcast the request
-	for i := 0; i < cfg.N; i++ {
+	for i := 0; i < cfg.Network.N; i++ {
 		txnreq := &pb.Transaction{
 			Data: &pb.TxnData{
 				AccountNonce: uint64(k),
@@ -97,7 +98,7 @@ func (cl *Client) NewRequest(msg string, k int, timeStamp int64) {
 		}
 
 		cl.addSig(txnreq.Data)
-		conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", cfg.GrpcPorts[i]), grpc.WithInsecure())
+		conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", cfg.Network.GrpcPorts[i]), grpc.WithInsecure())
 		if err != nil {
 			log.Fatalf("did not connect: %v", err)
 		}
@@ -116,14 +117,10 @@ func (cl *Client) NewRequest(msg string, k int, timeStamp int64) {
 }
 
 func main() {
-	cfg.LoadPbftSimConfig()
-
 	nReq := flag.Int("numquest", 10, "number of requests")
 	flag.Parse()
-
-	cfg.NumQuest = *nReq
-
-	fmt.Println("REQUESTS count - ", cfg.NumQuest)
+	cfg.Network.NumQuest = *nReq
+	log.Printf("REQUESTS count - ", cfg.Network.NumQuest)
 
 	cl := &Client{}
 	cl.LoadPbftClientConfig()
@@ -131,7 +128,7 @@ func main() {
 	go cl.Start() // in case client has some initial logic
 
 	start := time.Now()
-	for k := 0; k < cfg.NumQuest; k++ {
+	for k := 0; k < cfg.Network.NumQuest; k++ {
 		cl.NewRequest("Request "+strconv.Itoa(k), k, time.Now().Unix()) // Transaction request where nonce = gasPrice = k
 	}
 

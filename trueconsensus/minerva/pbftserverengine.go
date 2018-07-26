@@ -22,13 +22,13 @@ import (
 	"os/signal"
 	"time"
 
-	"trueconsensus/fastchain"
-
 	"golang.org/x/sys/unix"
+	"trueconsensus/fastchain"
+	"trueconsensus/logging"
 )
 
 var (
-	cfg    = pbft.Config{}
+	cfg    = pbft.GetPbftConfig()
 	svList []*pbft.Server
 )
 
@@ -36,8 +36,8 @@ var (
 func StartPbftServers() {
 	svList = make([]*pbft.Server, cfg.N)
 	for i := 0; i < cfg.N; i++ {
-		fmt.Println(cfg.IPList[i], cfg.Ports[i], i)
-		svList[i] = pbft.BuildServer(cfg, cfg.IPList[i], cfg.Ports[i], cfg.GrpcPorts[i], i)
+		fmt.Println(cfg.Network.IPList[i], cfg.Network.Ports[i], i)
+		svList[i] = pbft.BuildServer(cfg, i)
 	}
 
 	for i := 0; i < cfg.N; i++ {
@@ -56,11 +56,9 @@ func StartPbftServers() {
 func main() {
 
 	// initial the root logger
-	pbft.InitRootLoger()
-
-	cfg.LoadPbftSimConfig()
+	logging.InitRootLoger()
 	StartPbftServers()
-	cfg.GenerateKeysToFile(cfg.NumKeys)
+	cfg.GenerateKeysToFile()
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)

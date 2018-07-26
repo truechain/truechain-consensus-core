@@ -17,187 +17,246 @@ limitations under the License.
 package pbft
 
 import (
+	"fmt"
+	"gopkg.in/ini.v1"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"strings"
 	"trueconsensus/common"
 )
 
 const (
-	configFile               = "/.truechain_config.yml"
-	trueChainConsensusConfig = "TRUECHAIN_CONSENSUS_CONFIGURATION"
+	tunablesConfigEnv = "TRUE_TUNABLES_CONF"
+	generalConfigEnv  = "TRUE_GENERAL_CONF"
+	peerNetworkEnv    = "TRUE_NETWORK_CONF"
+	SimulatedEnv      = "TRUE_SIMULATION"
 )
 
-// // MaxFail defines the number of faults to be tolerated
-// const MaxFail = 1
+type Testbed struct {
+	Total            int  `yaml:"total"`
+	ClientID         int  `yaml:"client_id"`
+	InitServerID     int  `yaml:"server_id_init"`
+	ThreadingEnabled bool `yaml:"threading_enabled"`
+	MaxRetries       int  `yaml:"max_retries"`
+	MaxRequests      int  `yaml:"max_requests"`
+	BatchSize        int  `yaml:"batch_size"`
+}
 
-// // // OutputThreshold is an auxiliary to utils.MyPrint for verbosity
-// // const OutputThreshold = 0
+type Slowchain struct {
+	Csize int `yaml:"csize"`
+}
 
-// // BasePort is used as base value of ports defined for initializng PBFT servers
-// const BasePort = 40540
-// //GrpcBasePort is used as base value of ports defined for grpc communication between PBFT servers and clients
-// const GrpcBasePort = 10000
+// bftCommittee config
+type BftCommittee struct {
+	ActualDelta int `yaml:"actual_delta"`
+	Delta       int `yaml:"delta"`
+	Lambda      int `yaml:"lambda"`
+	Tbft        int `yaml:"tbft"`
+	Th          int `yaml:"th"`
+	Timeout     int `yaml:"timeout"`
+	Blocksize   int // Blocksize specifies the number of transactions per block
+	// TODO: add []chain
+	// Chain []struct {
+	// }
+}
 
-// Config  configuration for pbft
-type Config struct {
-	// general
-	BasePort          int   `yaml:"basePort"`
-	GrpcBasePort      int   `yaml:"grpcBasePort"`
-	MaxFail           int   `yaml:"maxFail"`
-	TorSocksPortRange []int `yaml:"torSocksPortRange"`
+type General struct {
+	MaxFail         int `yaml:"max_fail"`
+	BasePort        int `yaml:"rpc_base_port"`
+	OutputThreshold int `yaml:"output_threshold"`
+	MaxLogSize      int `yaml:"max_log_size"`
+	GrpcBasePort    int `yaml:"grpc_base_port"`
+}
 
-	// Node - generic struct used by each node to interact with connection pool details
-	Node struct {
-		N         int      // number of nodes to be launchedt
-		KD        string   // key directory where pub/priva ECDSA keys are stored
-		LD        string   // log directory
-		IPList    []string // stores list of IP addresses belonging to BFT nodes
-		Ports     []int    // stores list of Ports belonging to BFT nodes
-		GrpcPorts []int    // stores list of ports serving grpc requests
-		HostsFile string   // network config file, to read IP addresses from
-		NumQuest  int      // NumQuest is the number of requests sent from client
-		NumKeys   int      // NumKeys is the count of IP addresses (BFT nodes) participating
-		Blocksize int      // Blocksize specifies the number of transactions per block
-	}
-
-	// bftCommittee config
-	BftCommittee struct {
-		ActualDelta int `yaml:"actualDelta"`
-		Csize       int `yaml:"csize"`
-		Delta       int `yaml:"delta"`
-		Lambda      int `yaml:"lambda"`
-		Tbft        int `yaml:"tbft"`
-		Th          int `yaml:"th"`
-		Timeout     int `yaml:"timeout"`
-		// TODO: add []chain
-		// Chain []struct {
-		// }
-	}
-
-	// slow chain
-	Slowchain struct {
-		Csize int `yaml:"csize"`
-	}
-
+type Tunables struct {
+	// struct tags, to add metadata to a struct's fields
 	// testbed config
-	TestbedConfig struct {
-		ClientID     int `yaml:"clientID"`
-		InitServerID int `yaml:"initServerID"`
-		Requests     struct {
-			Max       int `yaml:"max"`
-			BatchSize int `yaml:"batchSize"`
-		}
-		ThreadingEnabled bool `yaml:"threadingEnabled"`
-		Total            int  `yaml:"total"`
+	Testbed `yaml:"testbed"`
+	// slow chain
+	Slowchain    `yaml:"slowchain"`
+	General      `yaml:"general"`
+	BftCommittee `yaml:"bft_committee"`
+}
+
+type Logistics struct {
+	LedgerLoc string
+	LD        string
+	ServerLog string
+	ClientLog string
+	KD        string // key directory where pub/priva ECDSA keys are stored
+
+}
+
+// Network - generic struct used by each node to interact with connection pool details
+type Network struct {
+	N         int      // number of nodes to be launchedt
+	IPList    []string // stores list of IP addresses belonging to BFT nodes
+	Ports     []int    // stores list of Ports belonging to BFT nodes
+	GrpcPorts []int    // stores list of ports serving grpc requests
+	NumQuest  int      // NumQuest is the number of requests sent from client
+	NumKeys   int      // NumKeys is the count of IP addresses (BFT nodes) participating
+	HostsFile string   // contains network addresses for server/client/peers
+}
+
+// Config - configuration for pbft.Config
+// Note: struct fields must be public in order for
+// unmarshal to correctly populate the data.
+type Config struct {
+	Tunables
+	Logistics
+	Network
+}
+
+func DefaultTunables() *Tunables {
+	return &Tunables{
+		Testbed: Testbed{
+			ClientID:         5,
+			MaxRequests:      10,
+			ThreadingEnabled: true,
+		},
+		// slow chain
+		Slowchain: Slowchain{
+			Csize: 10,
+		},
+		General: General{
+			BasePort:   40450,
+			MaxLogSize: 1023303,
+			MaxFail:    1,
+		},
 	}
 }
 
-func getFilePath() string {
-	path := os.Getenv(trueChainConsensusConfig)
+// LoadLogisticsCfg loads the .cfg file
+func LoadLogisticsCfg() (*ini.File, error) {
+	path := os.Getenv(generalConfigEnv)
 	if path == "" {
-		path = os.Getenv("HOME") + configFile
+		path = "/etc/truechain/logistics_bft.cfg"
 	}
-	return path
+	configData, err := ini.Load(path)
+	if err != nil {
+		fmt.Printf("Error reading ini file: %v", err)
+		return configData, err
+	}
+	return configData, nil
 }
 
-/*
-// LoadLogisticsIni loads trueconsensus/config/logistcs_bft.cfg
-func LoadLogisticsIni() (configData *ini.File, err error) {
-     path := path2.Join(os.Getenv("PWD"), "cfg.ini")
-    configData, err = ini.Load(path)
-    if err != nil {
-    	fmt.Printf("Error reading ini file: %v", err)
-    }
-    return configData, nil
-}
-*/
+// LoadTunablesConfig loads the .yaml file
+func (cfg *Config) LoadTunablesConfig() error {
 
-// LoadTunablesConfig loads trueconsensus/config/tunables_bft.yaml
-func LoadTunablesConfig() (*Config, error) {
+	path := os.Getenv(tunablesConfigEnv)
+	if path == "" {
+		path = "/etc/truechain/tunables_bft.yaml"
+	}
 
-	filePath := getFilePath()
-	yamlFile, err := ioutil.ReadFile(filePath)
+	yamlFile, err := ioutil.ReadFile(path)
+
 	if err != nil {
 		log.Printf("Unable to read config file. Error:%+v \n", err)
-		return nil, err
+		return err
 	}
 
-	/*
-		cfgData, err := LoadConfig()
-		common.CheckErr(err)
-		if cfgData != nil {
-
-			nd.cfg.LD = cfgData.Section("log").Key("log_folder").String()
-		} else {
-			nd.cfg.LD = path.Join(GetCWD(), "logs/")
-		}
-	*/
-
-	config := &Config{}
-	err = yaml.Unmarshal(yamlFile, config)
+	tunables := Tunables{}
+	err = yaml.Unmarshal(yamlFile, &tunables)
 	if err != nil {
 		log.Printf("Unable to Unmarshal config file. Error:%+v", err)
-		return nil, err
+		return err
 	}
 
-	err = validateConfig(config)
 	if err != nil {
 		log.Printf("Error: Validate config file values failed. Error: %+v", err)
-		return nil, err
+		return err
 	}
-	log.Printf("Info: initial the configuration for pbft \n")
-	return config, nil
-}
 
-func validateConfig(config *Config) error {
+	cfg.Tunables = tunables
 	return nil
 }
 
+// GenerateKeysToFile generates ECDSA public-private keypairs to a folder
+func (cfg *Config) GenerateKeysToFile() {
+	common.MakeDirIfNot(cfg.Logistics.KD)
+	WriteNewKeys(cfg.Network.NumKeys, cfg.Logistics.KD)
+
+	common.MyPrint(1, "Generated %d keypairs in %s folder..\n", cfg.Network.NumKeys, cfg.Logistics.KD)
+}
+
 // GetIPConfigs loads all the IPs from the ~/hosts files
-func GetIPConfigs(s string) ([]string, []int, []int) {
+func (cfg *Config) GetIPConfigs() {
 	// s: config file path
 	common.MyPrint(1, "Loading IP configs...\n")
-	contentB, err := ioutil.ReadFile(s)
+	contentB, err := ioutil.ReadFile(cfg.Network.HostsFile)
 	common.CheckErr(err)
 	content := string(contentB)
-	lst := strings.Fields(content)
-	ports := make([]int, 0)
-	grpcports := make([]int, 0)
-	for k := range lst {
-		ports = append(ports, BasePort+k)
-		grpcports = append(grpcports, GrpcBasePort+k)
+	cfg.Network.IPList = strings.Fields(content)
+	cfg.Network.Ports = make([]int, 0)
+	cfg.Network.GrpcPorts = make([]int, 0)
+	for k := range cfg.Network.IPList {
+		cfg.Network.Ports = append(cfg.Network.Ports, cfg.Tunables.General.BasePort+k)
+		cfg.Network.GrpcPorts = append(cfg.Network.GrpcPorts, cfg.Tunables.General.GrpcBasePort+k)
 	}
-	return lst, ports, grpcports
 }
 
-// GenerateKeysToFile generates ECDSA public-private keypairs to a folder
-func (cfg *Config) GenerateKeysToFile(numKeys int) {
-	MakeDirIfNot(cfg.KD)
-	WriteNewKeys(numKeys, cfg.KD)
-
-	MyPrint(1, "Generated %d keypairs in %s folder..\n", numKeys, cfg.KD)
+// ValidateConfig checks for aberrance and loads struct Config{} with tunables and logistics vars
+func (cfg *Config) ValidateConfig(cfgData *ini.File) error {
+	// TODO: refer to validate yaml from browbeat
+	cfg.Network.HostsFile = os.Getenv(peerNetworkEnv)
+	if cfg.Network.HostsFile == "" {
+		cfg.Network.HostsFile = "/etc/truechain/hosts"
+	}
+	cfg.GetIPConfigs()
+	cfg.Network.NumKeys = len(cfg.Network.IPList)
+	cfg.Network.N = cfg.Network.NumKeys - 1 // we assume client count to be 1
+	cfg.BftCommittee.Blocksize = 10         // This is hardcoded to 10 for now
+	return nil
 }
 
-// LoadPbftSimConfig loads configuration for running PBFT simulation
-func (cfg *Config) LoadPbftSimConfig() {
-	cfg.HostsFile = path.Join(os.Getenv("HOME"), "hosts") // TODO: read from config.yaml in future.
-	cfg.IPList, cfg.Ports, cfg.GrpcPorts = GetIPConfigs(cfg.HostsFile)
-	cfg.NumKeys = len(cfg.IPList)
-	cfg.N = cfg.NumKeys - 1 // we assume client count to be 1
-	// Load this from commandline/set default in client.go
-	// cfg.NumQuest = 100
-	cfg.Blocksize = 10 // This is hardcoded to 10 for now
-	cfg.KD = path.Join(GetCWD(), "keys/")
+func CheckErr(err error) {
+	if err != nil {
+		log.Printf("Error: Validate config file values failed. Error: %+v", err)
+	}
 }
 
 // GetPbftConfig returns the basic PBFT configuration used for simulation
 func GetPbftConfig() *Config {
 	cfg := &Config{}
-	cfg.LoadPbftSimConfig()
+	err := cfg.LoadTunablesConfig()
+	CheckErr(err)
+	cfgData, err := LoadLogisticsCfg()
+	CheckErr(err)
+
+	// CheckErr(err)
+	if cfgData != nil {
+		cfg.Logistics.KD = cfgData.Section("general").Key("pem_keystore_path").String()
+		cfg.Logistics.LedgerLoc = cfgData.Section("node").Key("ledger_location").String()
+		cfg.Logistics.LD = cfgData.Section("log").Key("root_folder").String()
+		cfg.Logistics.ServerLog = cfgData.Section("log").Key("server_logfile").String()
+		cfg.Logistics.ClientLog = cfgData.Section("log").Key("client_logfile").String()
+		logSize, _ := cfgData.Section("log").Key("max_log_size").Int()
+		cfg.General.MaxLogSize = logSize
+		log.Printf("Loaded logistics configuration.")
+	} else {
+		log.Printf("!! Unable to find required sections.")
+		cfg.Logistics.KD = path.Join("./keys/")
+		cfg.Logistics.LedgerLoc = "/var/log/truechain"
+		cfg.Logistics.LD = "/var/log/truechain"
+		cfg.Logistics.ServerLog = "engine.log"
+		cfg.Logistics.ClientLog = "client.log"
+		cfg.General.MaxLogSize = 4194304
+	}
+	err = cfg.ValidateConfig(cfgData)
+	CheckErr(err)
+
+	log.Println("---> using following configurations for project:")
+	// log.Printf("---> using following configurations:\n%+v\n\n", cfg)
+	yamlDebugInfo, _ := yaml.Marshal(&cfg)
+	fmt.Printf("%+v\n", string(yamlDebugInfo))
 
 	return cfg
-
 }
+
+// func main() {
+// 	cfg := GetPbftConfig()
+// 	fmt.Println(cfg)
+// }
