@@ -107,7 +107,7 @@ func (cl *Client) NewRequest(msg string, k int, timeStamp int64) {
 
 		resp, err := c.NewTxnRequest(ctx, txnreq)
 		if err != nil {
-			log.Fatalf("could not send transaction request to pbft node: %v", err)
+			log.Fatalf("Transaction request to PBFT node failed: %v", err)
 		}
 
 		fmt.Printf("%s\n", resp.Msg)
@@ -118,8 +118,11 @@ func (cl *Client) NewRequest(msg string, k int, timeStamp int64) {
 func main() {
 	cfg.LoadPbftSimConfig()
 
-	cfg.NumQuest = *flag.Int("numquest", 10, "number of requests")
+	nReq := flag.Int("numquest", 10, "number of requests")
 	flag.Parse()
+
+	cfg.NumQuest = *nReq
+
 	fmt.Println("REQUESTS count - ", cfg.NumQuest)
 
 	cl := &Client{}
