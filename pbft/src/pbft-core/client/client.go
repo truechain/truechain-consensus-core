@@ -27,8 +27,8 @@ import (
 
 	"pbft-core"
 
-	"github.com/golang/protobuf/proto"
 	"context"
+	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
 
 	pb "pbft-core/fastchain"

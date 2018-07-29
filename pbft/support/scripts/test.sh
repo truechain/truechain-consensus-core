@@ -1,7 +1,7 @@
 #!/bin/bash
 
 test_pkgs() {
-    for dir in $(find ./src/ \
+    for dir in $(find ./src/pbft-core/ \
         -mindepth 1 -maxdepth 1 -type d | grep -vE '/(test)$') ; do
         echo "$dir/..."
     done
