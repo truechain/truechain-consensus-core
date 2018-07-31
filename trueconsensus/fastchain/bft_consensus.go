@@ -19,7 +19,6 @@ package pbft
 import pb "trueconsensus/fastchain/proto"
 
 type DailyBFTNode interface {
-	ProxyNewClientRequest(arg ProxyNewClientRequestArg, reply *ProxyNewClientRequestReply) error
 	ProxyProcessPrePrepare(arg ProxyProcessPrePrepareArg, reply *ProxyProcessPrePrepareReply) error
 	ProxyProcessPrepare(arg ProxyProcessPrepareArg, reply *ProxyProcessPrepareReply) error
 	ProxyProcessCommit(arg ProxyProcessCommitArg, reply *ProxyProcessCommitReply) error

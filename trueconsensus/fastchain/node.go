@@ -947,7 +947,7 @@ func (nd *Node) processCommit(req Request) {
 	nd.addNodeHistory(req)
 	nd.incCommDict(DigType(req.Inner.Msg))
 	if nd.checkCommittedMargin(DigType(req.Inner.Msg), req) {
-		nd.CommittedBlock <- req.Inner.Block
+		nd.committedBlock <- req.Inner.Block
 		common.MyPrint(2, "[%d] Committed %v\n", nd.ID, req.Inner.Block.Header.Number)
 		nd.record("COMMITTED seq number " + strconv.Itoa(req.Inner.Seq))
 		nd.recordPBFTCommit(req)
@@ -1268,11 +1268,11 @@ func (nd *Node) createBlockAndBroadcast() {
 				tx := nd.txPool.priced.Get()
 				blockTxs = append(blockTxs, tx)
 				gasUsed = gasUsed + tx.Data.Price
-				nd.txPool.Remove(BytesToHash(tx.Data.Hash))
-				MyPrint(4, "Transacion count is %d", nd.txPool.GetTxCount())
+				nd.txPool.Remove(common.BytesToHash(tx.Data.Hash))
+				common.MyPrint(4, "Transacion count is %d", nd.txPool.GetTxCount())
 			}
-			parentHash := HashBlockHeader(nd.tc.LastBlockHeader)
-			txsHash := HashTxns(blockTxs)
+			parentHash := common.HashBlockHeader(nd.tc.LastBlockHeader)
+			txsHash := common.HashTxns(blockTxs)
 			header := NewPbftBlockHeader(nd.tc.LastBlockHeader.Number+1, 5000, int64(gasUsed), parentHash, txsHash)
 
 			block := NewPbftBlock(header, blockTxs)
@@ -1341,7 +1341,7 @@ func Make(cfg *Config, me int, port int, view int) *Node {
 	// kfpath := path.Join(cfg.Logistics.KD, filename)
 
 	nd.genesis = GetDefaultGenesisBlock()
-	MyPrint(0, "Genesis block generated: %x\n\n", nd.genesis.Header.TxnsHash)
+	common.MyPrint(0, "Genesis block generated: %x\n\n", nd.genesis.Header.TxnsHash)
 
 	nd.newTrueChain()
 

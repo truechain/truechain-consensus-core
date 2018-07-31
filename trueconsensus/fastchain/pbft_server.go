@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"time"
 	"trueconsensus/common"
 
 	pb "trueconsensus/fastchain/proto"
@@ -54,7 +53,7 @@ func (sv *fastChainServer) NewTxnRequest(ctx context.Context, txnReq *pb.Transac
 	common.MyPrint(4, "Received new transacion request %d from client on node %d", txnReq.Data.AccountNonce, sv.pbftSv.Nd.ID)
 
 	// Discard already known transactions
-	if sv.pbftSv.Nd.txPool.all.Get(BytesToHash(txnReq.Data.Hash)) != nil {
+	if sv.pbftSv.Nd.txPool.all.Get(common.BytesToHash(txnReq.Data.Hash)) != nil {
 		return &pb.GenericResp{Msg: "Already known transaction. Ignoring transaction request."}, errors.New("Transaction already exists in pool")
 	}
 
@@ -90,7 +89,7 @@ func BuildServer(cfg *Config, me int) *Server {
 	sv.IP = cfg.Network.IPList[me]
 	sv.Port = cfg.Network.Ports[me]
 	sv.Cfg = cfg
-	sv.Nd = Make(cfg, me, cfg.Network.Ports[me], 0, applyChan)
+	sv.Nd = Make(cfg, me, cfg.Network.Ports[me], 0)
 
 	RegisterPbftGrpcListener(cfg.Network.GrpcPorts[me], sv)
 
