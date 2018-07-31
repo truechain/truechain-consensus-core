@@ -32,9 +32,10 @@ const (
 	tunablesConfigEnv = "TRUE_TUNABLES_CONF"
 	generalConfigEnv  = "TRUE_GENERAL_CONF"
 	peerNetworkEnv    = "TRUE_NETWORK_CONF"
-	SimulatedEnv      = "TRUE_SIMULATION"
+	simulatedEnv      = "TRUE_SIMULATION" // simulatedEnv apprises the project of products env vs an alternate reality
 )
 
+// Testbed configuration params are a stimulus for simulation
 type Testbed struct {
 	Total            int  `yaml:"total"`
 	ClientID         int  `yaml:"client_id"`
@@ -45,11 +46,14 @@ type Testbed struct {
 	BatchSize        int  `yaml:"batch_size"`
 }
 
+// Slowchain defines attiributes specific to slowchain.
+// Note: Csize is just a placeholder and has no use.
 type Slowchain struct {
 	Csize int `yaml:"csize"`
 }
 
-// bftCommittee config
+// BftCommittee config initiates assumption values from whitepaper
+// May or maynot change during runtime
 type BftCommittee struct {
 	ActualDelta int `yaml:"actual_delta"`
 	Delta       int `yaml:"delta"`
@@ -63,6 +67,7 @@ type BftCommittee struct {
 	// }
 }
 
+// General defines generic tunables
 type General struct {
 	MaxFail         int `yaml:"max_fail"`
 	BasePort        int `yaml:"rpc_base_port"`
@@ -71,11 +76,11 @@ type General struct {
 	GrpcBasePort    int `yaml:"grpc_base_port"`
 }
 
+// Tunables is grouped under the struct Config, cocoon params for the server
 type Tunables struct {
 	// struct tags, to add metadata to a struct's fields
 	// testbed config
-	Testbed `yaml:"testbed"`
-	// slow chain
+	Testbed      `yaml:"testbed"`
 	Slowchain    `yaml:"slowchain"`
 	General      `yaml:"general"`
 	BftCommittee `yaml:"bft_committee"`

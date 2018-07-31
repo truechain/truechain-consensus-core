@@ -1,6 +1,8 @@
 # truechain-consensus-core
 TrueChain Consensus Protocol
 
+[![Waffle.io - Columns and their card count](https://badge.waffle.io/truechain/truechain-consensus-core.svg?columns=all)](https://waffle.io/truechain/truechain-consensus-core)
+
 [![Travis](https://travis-ci.com/truechain/truechain-consensus-core.svg?branch=master)](https://travis-ci.com/truechain/truechain-consensus-core)
 
 # Building the source
@@ -59,13 +61,21 @@ export GOBIN=$GOPATH/bin
 export PATH=$PATH:$GOBIN
 ```
 
-Then,
+And before running, make sure you have the following taken care of, for orchestration:
+
+1. `TRUE_TUNABLES_CONF` corresponds to `/etc/truechain/tunables_bft.yaml`, default's under project's `config/` folder.
+
+2. `TRUE_GENERAL_CONF` corresponds to `/etc/truechain/logistics_bft.cfg`, default's under this project's `config/`
+
+3. `TRUE_NETWORK_CONF` corresponds to `/etc/truechain/hosts`, Default's under this project's `config/`
+  This file is populated with repetitive 5-6 lines containing loopback IP address `127.0.0.1`.
+  
+4. `TRUE_SIMULATION` is as follows:
+  - if set to 0 (default) - should tell the project to pickup testbed configurations. 
+  - if set to 1 - staging, meaning all CI/CD tests are run before draft run. (dummy functionality at the moment)
+  - if set to 1 - production. Will try to connect to boot nodes. (dummy functionality at the moment)
 
 ### Run
-
-Populate a sample `/etc/truechain/hosts` file with repetitive 5-6 lines containing loopback IP address `127.0.0.1`. 
-
-Then,
 
 ```
 ./bin/{linux/darwin}/truechain-engine
@@ -74,10 +84,10 @@ Then,
 To install:
 
 ```
-cd $GOPATH/src/github.com/truechain/truechain-consensus-core
-hmake
-cp bin/{linux/darwin}/truechain-engine $GOBIN/
+./support/scripts/install.sh linux
+```
 
+```
 # then from anywhere in shell, run
 $ truechain-engine
 ```

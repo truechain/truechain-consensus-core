@@ -79,6 +79,17 @@ targets:
       - checkfmt
       - lint
 
+  # sort usage of sudo in HyperMake or else, use ansible
+  # install:
+  #   description: install the configs 
+  #   after:
+  #     - build-linux
+  #   watches:
+  #     - support/scripts/build.sh
+  #     - config/*
+  #   cmds:
+  #     - ./support/scripts/install.sh linux
+
   test:
     description: run tests
     after:

@@ -35,14 +35,6 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/go-ini/ini",
-			"repository": "https://github.com/go-ini/ini",
-			"vcs": "git",
-			"revision": "358ee7663966325963d4e8b2e1fbd570c5195153",
-			"branch": "master",
-			"notests": true
-		},
-		{
 			"importpath": "github.com/golang/glog",
 			"repository": "https://github.com/golang/glog",
 			"vcs": "git",
@@ -153,6 +145,15 @@
 			"notests": true
 		},
 		{
+			"importpath": "google.golang.org/genproto/googleapis/rpc/status",
+			"repository": "https://github.com/google/go-genproto",
+			"vcs": "git",
+			"revision": "32ee49c4dd805befd833990acba36cb75042378c",
+			"branch": "master",
+			"path": "googleapis/rpc/status",
+			"notests": true
+		},
+		{
 			"importpath": "google.golang.org/grpc",
 			"repository": "https://github.com/grpc/grpc-go",
 			"vcs": "git",
@@ -161,12 +162,11 @@
 			"notests": true
 		},
 		{
-			"importpath": "google.golang.org/genproto/googleapis/rpc/status",
-			"repository": "https://github.com/google/go-genproto",
+			"importpath": "gopkg.in/ini.v1",
+			"repository": "https://gopkg.in/ini.v1",
 			"vcs": "git",
-			"revision": "32ee49c4dd805befd833990acba36cb75042378c",
+			"revision": "358ee7663966325963d4e8b2e1fbd570c5195153",
 			"branch": "master",
-			"path": "googleapis/rpc/status",
 			"notests": true
 		},
 		{
