@@ -24,6 +24,18 @@ targets:
     cmds:
       - gvt restore
 
+  build-darwin:
+    description: build Go source code for darwin
+    after:
+      - deps
+    watches:
+      - src/**/**/*.go
+      - support/scripts/build.sh
+    cmds:
+      - ./support/scripts/build.sh darwin
+    artifacts:
+      - bin/darwin/truechain-engine
+
   build-linux:
     description: build Go source code for linux
     after:
@@ -83,4 +95,4 @@ settings:
   exec-target: deps
   exec-shell: /bin/bash
   docker:
-    image: 'truechain/go-toolchain:1.10.0'
+    image: 'truechain/toolchain:0.1'
