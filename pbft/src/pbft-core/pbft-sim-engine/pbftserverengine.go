@@ -21,7 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"time"
-	
+
 	"pbft-core"
 
 	"golang.org/x/sys/unix"

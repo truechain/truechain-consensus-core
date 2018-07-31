@@ -1,7 +1,7 @@
 #!/bin/bash
 
 checkfmt() {
-    local files="$(gofmt -l ./src)"
+    local files="$(gofmt -l ./src/pbft-core)"
     if [ -n "$files" ]; then
         echo "$files" >&2
         return 1
