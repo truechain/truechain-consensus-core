@@ -1,7 +1,7 @@
 #!/bin/bash
 
 checkfmt() {
-    local files="$(gofmt -l ./src/pbft-core)"
+    local files="$(gofmt -l ./trueconsensus/fastchain)"
     if [ -n "$files" ]; then
         echo "$files" >&2
         return 1
@@ -9,7 +9,7 @@ checkfmt() {
 }
 
 lint_pkgs() {
-    for dir in $(find ./src \
+    for dir in $(find ./trueconsensus \
         -mindepth 1 -maxdepth 1 -type d ); do
         echo "$dir/..."
     done
@@ -24,7 +24,7 @@ lint() {
         --deadline=600s \
         --severity=golint:error \
         --errors \
-        ./src/...
+        ./trueconsensus/...
 }
 
 usage() {

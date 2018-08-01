@@ -16,16 +16,16 @@ limitations under the License.
 
 package pbft
 
-import "net"
-
-// import "fmt"
-import "net/rpc"
 import (
+	"net"
 	"net/http"
+	"net/rpc"
 	"strconv"
+	"trueconsensus/common"
 )
 
-// MakeTransportations - TODO: implement send/receive messages with RPC
+// MakeTransportations is a placeholder. All network related functions
+// should be defined here. TODO: implement send/receive messages with RPC
 func (cfg *Config) MakeTransportations(index int) []*rpc.Client {
 	// index: the index if the server itself
 	clientList := make([]*rpc.Client, 0)
@@ -33,11 +33,11 @@ func (cfg *Config) MakeTransportations(index int) []*rpc.Client {
 	rpc.Register(&Node{})
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", ":"+strconv.Itoa(cfg.Network.Ports[index]))
-	CheckErr(e)
+	common.CheckErr(e)
 	go http.Serve(l, nil)
 	for ind, val := range cfg.Network.IPList {
 		client, e := rpc.DialHTTP("tcp", val+":"+strconv.Itoa(cfg.Network.Ports[ind]))
-		CheckErr(e)
+		common.CheckErr(e)
 		clientList = append(clientList, client)
 	}
 	return clientList

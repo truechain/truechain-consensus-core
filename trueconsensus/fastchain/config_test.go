@@ -24,10 +24,12 @@ import (
 )
 
 func TestConfig(t *testing.T) {
-	filePath, err := filepath.Abs("/src/support/config.yaml")
+	filePath, err := filepath.Abs("/etc/truechain/tunables_bft.yaml")
 	assert.Nil(t, err)
-	os.Setenv(trueChainConsensusConfig, filePath)
-	config, err := LoadTunablesConfig()
+	os.Setenv(TunablesConfigEnv, filePath)
+	config := &Config{}
+	err = config.LoadTunablesConfig()
 	assert.Nil(t, err)
-	assert.NotEqual(t, 0, len(config.TorSocksPortRange))
+	assert.NotEqual(t, 0, config.Tunables.BftCommittee.Blocksize)
+	assert.Equal(t, 49500, config.Tunables.General.BasePort)
 }

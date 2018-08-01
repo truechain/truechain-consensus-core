@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x -e
+# set -x -e
 
 # pre-prepare
 export GOOS=$1
@@ -33,7 +33,7 @@ fi
 # install
 OUTDIR="bin/$GOOS"
 cp config/* ${TRUE_CONF_DIR%/}/
-cp "$OUTDIR"/{truechain-engine,pbft-client} $GOBIN/
+cp $OUTDIR/{truechain-engine,pbft-client} $GOBIN/
 
 # sanity checks for installation
 

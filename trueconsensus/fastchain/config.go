@@ -29,10 +29,14 @@ import (
 )
 
 const (
-	tunablesConfigEnv = "TRUE_TUNABLES_CONF"
-	generalConfigEnv  = "TRUE_GENERAL_CONF"
-	peerNetworkEnv    = "TRUE_NETWORK_CONF"
-	simulatedEnv      = "TRUE_SIMULATION" // simulatedEnv apprises the project of products env vs an alternate reality
+	// TunablesConfigEnv is an env var to fetch tunables .yaml conf
+	TunablesConfigEnv = "TRUE_TUNABLES_CONF"
+	// GeneralConfigEnv is an env var to fetch logistics .ini conf
+	GeneralConfigEnv = "TRUE_GENERAL_CONF"
+	// PeerNetworkEnv is an env var to fetch hosts file contaning peer address list
+	PeerNetworkEnv = "TRUE_NETWORK_CONF"
+	// SimulatedEnv apprises the project of products env vs an alternate reality
+	SimulatedEnv = "TRUE_SIMULATION"
 )
 
 // Testbed configuration params are a stimulus for simulation
@@ -49,22 +53,23 @@ type Testbed struct {
 // Slowchain defines attiributes specific to slowchain.
 // Note: Csize is just a placeholder and has no use.
 type Slowchain struct {
-	Csize int `yaml:"csize"`
+	Csize int `yaml:"csize"` // Snailchain's chainsize
 }
 
 // BftCommittee config initiates assumption values from whitepaper
 // May or maynot change during runtime
 type BftCommittee struct {
-	ActualDelta int `yaml:"actual_delta"`
-	Delta       int `yaml:"delta"`
-	Lambda      int `yaml:"lambda"`
-	Tbft        int `yaml:"tbft"`
-	Th          int `yaml:"th"`
-	Timeout     int `yaml:"timeout"`
-	Blocksize   int // Blocksize specifies the number of transactions per block
-	// TODO: add []chain
-	// Chain []struct {
-	// }
+	Blocksize      int `yaml:"block_size"` // Blocksize specifies the number of transactions per block
+	BlockFrequency int `yaml:"block_frequency"`
+	Lambda         int `yaml:"lambda"`
+	WaitTimeout    int `yaml:"wait_timeout"`
+	Tbft           int `yaml:"tbft"`
+	Th             int `yaml:"th"`
+	ActualDelta    int `yaml:"actual_delta"`
+	Delta          int `yaml:"delta"`
+	Alpha          int `yaml:"alpha"`
+	Csize          int `yaml:"csize"`
+	// Chain           []int `yaml:"chain"`
 }
 
 // General defines generic tunables
@@ -74,6 +79,7 @@ type General struct {
 	OutputThreshold int `yaml:"output_threshold"`
 	MaxLogSize      int `yaml:"max_log_size"`
 	GrpcBasePort    int `yaml:"grpc_base_port"`
+	RequestTimeout  int `yaml:"request_timeout"`
 }
 
 // Tunables is grouped under the struct Config, cocoon params for the server
@@ -86,13 +92,16 @@ type Tunables struct {
 	BftCommittee `yaml:"bft_committee"`
 }
 
+// Logistics contains paths corresponding to following env vars:
+// TRUE_CONF_DIR='/etc/truechain/'   - contains hosts, tunables and logistics configurables
+// TRUE_LOG_DIR='/var/log/truechain' - contains all things ledger and logs
+// TRUE_LIB_DIR='/var/lib/truechain' - contains keys and all things db
 type Logistics struct {
 	LedgerLoc string
 	LD        string
 	ServerLog string
 	ClientLog string
 	KD        string // key directory where pub/priva ECDSA keys are stored
-
 }
 
 // Network - generic struct used by each node to interact with connection pool details
@@ -115,28 +124,48 @@ type Config struct {
 	Network
 }
 
+// DefaultTunables contains default values for Tunables,
+// in case, config file wasn't found
 func DefaultTunables() *Tunables {
 	return &Tunables{
 		Testbed: Testbed{
+			Total:            5,
 			ClientID:         5,
-			MaxRequests:      10,
+			InitServerID:     4,
 			ThreadingEnabled: true,
+			MaxRetries:       5,
+			MaxRequests:      10,
+			BatchSize:        4,
 		},
-		// slow chain
 		Slowchain: Slowchain{
-			Csize: 10,
+			Csize: 0,
 		},
 		General: General{
-			BasePort:   40450,
-			MaxLogSize: 1023303,
-			MaxFail:    1,
+			MaxFail:         1,
+			BasePort:        40450,
+			OutputThreshold: 0,
+			MaxLogSize:      1023303,
+			GrpcBasePort:    10000,
+			RequestTimeout:  60,
+		},
+		BftCommittee: BftCommittee{
+			Blocksize:      10,
+			BlockFrequency: 1,
+			Lambda:         1,
+			WaitTimeout:    60,
+			Tbft:           1,
+			Csize:          0,
+			Th:             10,
+			ActualDelta:    0,
+			Delta:          1,
+			Alpha:          0,
 		},
 	}
 }
 
 // LoadLogisticsCfg loads the .cfg file
 func LoadLogisticsCfg() (*ini.File, error) {
-	path := os.Getenv(generalConfigEnv)
+	path := os.Getenv(GeneralConfigEnv)
 	if path == "" {
 		path = "/etc/truechain/logistics_bft.cfg"
 	}
@@ -151,7 +180,7 @@ func LoadLogisticsCfg() (*ini.File, error) {
 // LoadTunablesConfig loads the .yaml file
 func (cfg *Config) LoadTunablesConfig() error {
 
-	path := os.Getenv(tunablesConfigEnv)
+	path := os.Getenv(TunablesConfigEnv)
 	if path == "" {
 		path = "/etc/truechain/tunables_bft.yaml"
 	}
@@ -167,15 +196,11 @@ func (cfg *Config) LoadTunablesConfig() error {
 	err = yaml.Unmarshal(yamlFile, &tunables)
 	if err != nil {
 		log.Printf("Unable to Unmarshal config file. Error:%+v", err)
-		return err
+		cfg.Tunables = *DefaultTunables()
+		log.Printf("Loaded default tunables from hardcoded values, instead.")
+	} else {
+		cfg.Tunables = tunables
 	}
-
-	if err != nil {
-		log.Printf("Error: Validate config file values failed. Error: %+v", err)
-		return err
-	}
-
-	cfg.Tunables = tunables
 	return nil
 }
 
@@ -192,7 +217,7 @@ func (cfg *Config) GetIPConfigs() {
 	// s: config file path
 	common.MyPrint(1, "Loading IP configs...\n")
 	contentB, err := ioutil.ReadFile(cfg.Network.HostsFile)
-	common.CheckErr(err)
+	CheckConfigErr(err)
 	content := string(contentB)
 	cfg.Network.IPList = strings.Fields(content)
 	cfg.Network.Ports = make([]int, 0)
@@ -206,7 +231,7 @@ func (cfg *Config) GetIPConfigs() {
 // ValidateConfig checks for aberrance and loads struct Config{} with tunables and logistics vars
 func (cfg *Config) ValidateConfig(cfgData *ini.File) error {
 	// TODO: refer to validate yaml from browbeat
-	cfg.Network.HostsFile = os.Getenv(peerNetworkEnv)
+	cfg.Network.HostsFile = os.Getenv(PeerNetworkEnv)
 	if cfg.Network.HostsFile == "" {
 		cfg.Network.HostsFile = "/etc/truechain/hosts"
 	}
@@ -217,21 +242,24 @@ func (cfg *Config) ValidateConfig(cfgData *ini.File) error {
 	return nil
 }
 
-func CheckErr(err error) {
+// CheckConfigErr first prints config specific error messages
+// (TODO: add context param for message), then redirects to
+// project wide CheckErr()
+func CheckConfigErr(err error) {
 	if err != nil {
 		log.Printf("Error: Validate config file values failed. Error: %+v", err)
 	}
+	common.CheckErr(err)
 }
 
 // GetPbftConfig returns the basic PBFT configuration used for simulation
 func GetPbftConfig() *Config {
 	cfg := &Config{}
 	err := cfg.LoadTunablesConfig()
-	CheckErr(err)
+	CheckConfigErr(err)
 	cfgData, err := LoadLogisticsCfg()
-	CheckErr(err)
+	CheckConfigErr(err)
 
-	// CheckErr(err)
 	if cfgData != nil {
 		cfg.Logistics.KD = cfgData.Section("general").Key("pem_keystore_path").String()
 		cfg.Logistics.LedgerLoc = cfgData.Section("node").Key("ledger_location").String()
@@ -251,7 +279,7 @@ func GetPbftConfig() *Config {
 		cfg.General.MaxLogSize = 4194304
 	}
 	err = cfg.ValidateConfig(cfgData)
-	CheckErr(err)
+	CheckConfigErr(err)
 
 	log.Println("---> using following configurations for project:")
 	// log.Printf("---> using following configurations:\n%+v\n\n", cfg)

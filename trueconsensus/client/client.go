@@ -120,7 +120,7 @@ func main() {
 	nReq := flag.Int("numquest", 10, "number of requests")
 	flag.Parse()
 	cfg.Network.NumQuest = *nReq
-	log.Printf("REQUESTS count - ", cfg.Network.NumQuest)
+	log.Printf("REQUESTS count - %v", cfg.Network.NumQuest)
 
 	cl := &Client{}
 	cl.LoadPbftClientConfig()

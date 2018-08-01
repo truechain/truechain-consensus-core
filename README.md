@@ -77,45 +77,66 @@ And before running, make sure you have the following taken care of, for orchestr
 
 ### Run
 
+Server:
 ```
 ./bin/{linux/darwin}/truechain-engine
 ```
 
-To install:
+Client:
+```
+$ ./bin/{linux/darwin}/pbft-client -h
+
+Usage of pbft-client:
+  -numquest int
+    	number of requests (default 10)
+```
+
+
+Optional - To install:
 
 ```
 ./support/scripts/install.sh linux
-```
-
-```
-# then from anywhere in shell, run
+# then from 1 shell, run
 $ truechain-engine
+# and a different shell, run
+$ pbft-client -numquest 40
 ```
 
 This triggers both server and client subroutines. Also displays progress of key signing, data exchange and ledger log.
 
 ```
+2018/07/31 18:19:23 Loaded logistics configuration.
 [.]Loading IP configs...
-[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)[ ]%!(EXTRA string=127.0.0.1)Get IPList [127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1], Ports [40540 40541 40542 40543 40544 40545]
-[.]Generated 6 keypairs in /home/arcolife/go/src/github.com/truechain/truechain-consensus-core/keys folder..
-127.0.0.1 40540 0
+
+2018/07/31 18:19:23 ---> using following configurations for project:
+tunables:
+  testbed:
+    total: 5
+    client_id: 5
+    server_id_init: 4
+
+127.0.0.1 49500 0
 [!]Going to tolerate 1 adversaries
-[!]Initial Config &{{5 /home/arcolife/go/src/github.com/truechain/truechain-consensus-core/keys  [127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1 127.0.0.1] [40540 40541 40542 40543 40544 40545] /home/arcolife/hosts 100 6} {0 0} {0 0} [] 40540 100 false <nil> <nil> <nil> <nil> 0 0 5 0 true 1 0 0 0 0 0 0 [] 100 0 0 map[] 600  map[] map[] map[] map[] map[] map[] <nil> <nil> {{0 0} map[]} map[] 0xc420022c00}
-fetching file:  sign0.pub
-[.]Fetched private keyfetching file:  sign1.pub
-fetching file:  sign2.pub
-fetching file:  sign3.pub
+
+[!]Initial Node Config &{cfg:0xc4200a6600 mu:{state:0 sema:0} clientMu:{state:0 sema:0} peers:[] port:49500 killFlag:false ListenReady:<nil> SetupReady:<nil> EcdsaKey:<nil> helloSignature:<nil> connections:0 ID:0 N:4 view:0 viewInUse:true f:1 lowBound:0 highBound:0 Primary:0 seq:0 lastExecuted:0 lastStableCheckpoint:0 checkpointProof:[] checkpointInterval:100 vmin:0 vmax:0 waiting:map[] timeout:600 clientBuffer: active:map[] prepared:map[] prepDict:map[] commDict:map[] viewDict:map[] KeyDict:map[] outputLog:<nil> commitLog:<nil> nodeMessageLog:{mu:{state:0 sema:0} content:map[]} clientMessageLog:map[] committedBlock:<nil> txPool:<nil> genesis:<nil> tc:<nil>}
+
+[ ]Genesis block generated: 56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421
 ...
 <snip>
+...
+[!][3] ProxyProcessCommit 4
+[!][1] Committed 4
+[!][2] Committed 4
+[!][3] Committed 4
 ```
 
 ### CI
 
-hmake build checks:
+```
+hmake build test check
+```
 
-```
-hmake build check test
-```
+TODO: add travis yaml
 
 #### managing a missing dependency 
 

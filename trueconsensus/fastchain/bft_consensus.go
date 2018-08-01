@@ -18,6 +18,8 @@ package pbft
 
 import pb "trueconsensus/fastchain/proto"
 
+// DailyBFTNode - an interface supposed to expose fastchain / committee consensus to an orchestration mechanism
+// See - https://github.com/truechain/truechain-consensus-core/issues/26
 type DailyBFTNode interface {
 	ProxyProcessPrePrepare(arg ProxyProcessPrePrepareArg, reply *ProxyProcessPrePrepareReply) error
 	ProxyProcessPrepare(arg ProxyProcessPrepareArg, reply *ProxyProcessPrepareReply) error
