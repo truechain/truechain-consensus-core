@@ -1,0 +1,33 @@
+# pbft core configurations
+# name: pbft base configuration
+testbed:
+  total: 5 # excluding base client
+  client_id: 5 # total-1 => 0-indexed # TODO -> add threaded multi client request support, and check for id->seq consistency 
+  server_id_init: 4 # N => 0 indexed
+  threading_enabled: true
+  max_retries: 5
+  max_requests: 12
+  batch_size: 4
+general:
+  max_fail: 1 # number of faults to be tolerated
+  rpc_base_port: 49500 # starting port for pbft server
+  output_threshold: 0 # an auxiliary to utils.MyPrint for verbosity
+  # tor_socksport_range: 9050,9150
+  grpc_base_port: 10000 # gRPC servers and client
+  request_timeout: 60
+# refer to  README.md#parameterized-by-following section for these configurables
+slowchain:
+  csize: 0
+bft_committee:
+  block_size: 10 # no of txns in a block
+  block_frequency: 1 # No. of seconds a block is sent out by the committee members
+  lambda: 1
+  wait_timeout: 300 # seconds
+  tbft: 1
+  csize: 0
+  th: 10 # adjusted to ⌈csize/3⌉ later
+  actual_delta: 0
+  delta: 1 # ms to be adjusted from network ping test
+  # https://github.com/matthieu-lapeyre/network-benchmark/blob/master/network_test.py
+  # chain: []
+  alpha: 0 # initial adversary hash power

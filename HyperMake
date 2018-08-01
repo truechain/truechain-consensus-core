@@ -1,0 +1,109 @@
+---
+format: hypermake.v0
+name: truechain
+description: truechain
+
+targets:
+  rebuild-toolchain:
+     description: build toolchain image
+     watches:
+       - support/toolchain/
+     build: support/toolchain/
+     cache: false
+
+  toolchain:
+      description: toolchain dependencies
+
+  deps:
+    description: populate deps packages
+    after:
+      - toolchain
+    workdir: trueconsensus
+    watches:
+      - trueconsensus/vendor/manifest
+    cmds:
+      - gvt restore
+
+  build-darwin:
+    description: build Go source code for darwin
+    after:
+      - deps
+    watches:
+      - src/**/**/*.go
+      - support/scripts/build.sh
+    cmds:
+      - ./support/scripts/build.sh darwin
+    artifacts:
+      - bin/darwin/truechain-engine
+
+  build-linux:
+    description: build Go source code for linux
+    after:
+      - deps
+    watches:
+      - trueconsensus/**/*.go
+      - support/scripts/build.sh
+    cmds:
+      - ./support/scripts/build.sh linux
+    artifacts:
+      - bin/linux/truechain-engine
+
+  build:
+    description: build binaries
+    after:
+      - 'build-*'
+
+  checkfmt:
+    description: check code format
+    after:
+      - toolchain
+    watches:
+      - support/scripts/check.sh
+    always: true
+    cmds:
+      - ./support/scripts/check.sh fmt
+
+  lint:
+    description: check code using metalint
+    after:
+      - toolchain
+    watches:
+      - support/scripts/check.sh
+    always: true
+    cmds:
+      - ./support/scripts/check.sh lint
+
+  check:
+    description: check source code
+    after:
+      - checkfmt
+      - lint
+
+  # sort usage of sudo in HyperMake or else, use ansible
+  # install:
+  #   description: install the configs 
+  #   after:
+  #     - build-linux
+  #   watches:
+  #     - support/scripts/build.sh
+  #     - config/*
+  #   cmds:
+  #     - ./support/scripts/install.sh linux
+
+  test:
+    description: run tests
+    after:
+      - build
+    always: true
+    cmds:
+      - ./support/scripts/test.sh
+
+settings:
+  default-targets:
+    - build
+    - check
+
+  exec-target: deps
+  exec-shell: /bin/bash
+  docker:
+    image: 'truechain/toolchain:0.1'
